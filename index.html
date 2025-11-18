@@ -8,7 +8,16 @@
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-  <canvas id="canvas1"></canvas>
+  <div class="game-container">
+    <canvas id="gameCanvas" aria-label="Catch your mess game"></canvas>
+    <div class="side-panel leaderboard-panel" aria-hidden="true">
+      <h2>Leaderboard</h2>
+      <ol id="leaderboardList" class="pixel-font">
+        <!-- Leaderboard entries will be injected here -->
+      </ol>
+    </div>
+  </div>
+
   <script src="scripts/script.js"></script>
 </body>
 </html>
