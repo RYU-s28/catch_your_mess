@@ -4,8 +4,45 @@ window.addEventListener('load', function(){
     const LEADERBOARD_FILE = 'data/highscores.json';
     let leaderboard = [];
 
-    // Helper: load leaderboard from server; fall back to localStorage if server unreachable
+    // Initialize Firebase (if SDK loaded and config present)
+    let db = null;
+    try {
+        if (window.firebase && window.__FIREBASE_CONFIG) {
+            try { firebase.app(); } catch(e) { firebase.initializeApp(window.__FIREBASE_CONFIG); }
+            if (firebase && firebase.firestore) {
+                db = firebase.firestore();
+            }
+        }
+    } catch (e) {
+        console.warn('Firebase init failed', e);
+        db = null;
+    }
+
+    // Helper: load leaderboard (Firestore -> server -> localStorage)
     async function loadLeaderboard() {
+        // Try Firestore first
+        if (db) {
+            try {
+                const q = db.collection('highscores').orderBy('score', 'desc').limit(10);
+                const snap = await q.get();
+                leaderboard = snap.docs.map(d => {
+                    const data = d.data();
+                    let dateStr = '';
+                    if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                        dateStr = data.createdAt.toDate().toLocaleString();
+                    } else if (data.date) {
+                        dateStr = data.date;
+                    }
+                    return { name: String(data.name || '---').slice(0,8), score: Number(data.score || 0), date: dateStr };
+                });
+                updateLeaderboardPanel();
+                return;
+            } catch (e) {
+                console.warn('Firestore load failed, falling back', e);
+            }
+        }
+
+        // Try Express server next
         try {
             const res = await fetch('/api/highscores');
             if (res.ok) {
@@ -17,6 +54,8 @@ window.addEventListener('load', function(){
         } catch (e) {
             // ignore and try localStorage fallback
         }
+
+        // Local fallback
         try {
             const data = localStorage.getItem('highscores');
             if (data) leaderboard = JSON.parse(data);
@@ -50,14 +89,33 @@ window.addEventListener('load', function(){
         return leaderboard.some(entry => score > entry.score);
     }
 
-    // Helper: add new highscore (posts to server; falls back to localStorage)
+    // Helper: add new highscore (try Firestore -> Express -> localStorage)
     async function addHighscore(name, score) {
-        // try server
+        const shortName = String(name || '???').trim().slice(0,8) || '???';
+
+        // Try Firestore
+        if (db) {
+            try {
+                await db.collection('highscores').add({
+                    name: shortName,
+                    score: Math.floor(Number(score)),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // reload
+                await loadLeaderboard();
+                saveLeaderboard();
+                return;
+            } catch (e) {
+                console.warn('Firestore write failed, falling back', e);
+            }
+        }
+
+        // Try Express server next
         try {
             const res = await fetch('/api/highscores', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.slice(0,8), score: Number(score) })
+                body: JSON.stringify({ name: shortName, score: Number(score) })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -70,10 +128,10 @@ window.addEventListener('load', function(){
             // server not available, fallback below
         }
 
-        // fallback: update locally
+        // Local fallback
         const now = new Date();
         const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        leaderboard.push({ name: name.slice(0,8), score, date: dateStr });
+        leaderboard.push({ name: shortName, score: Math.floor(Number(score)), date: dateStr });
         leaderboard.sort((a, b) => b.score - a.score);
         leaderboard = leaderboard.slice(0, LEADERBOARD_SIZE);
         saveLeaderboard();
