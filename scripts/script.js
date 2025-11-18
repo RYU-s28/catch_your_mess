@@ -4,8 +4,19 @@ window.addEventListener('load', function(){
     const LEADERBOARD_FILE = 'data/highscores.json';
     let leaderboard = [];
 
-    // Helper: load leaderboard from localStorage (simulate file for browser)
-    function loadLeaderboard() {
+    // Helper: load leaderboard from server; fall back to localStorage if server unreachable
+    async function loadLeaderboard() {
+        try {
+            const res = await fetch('/api/highscores');
+            if (res.ok) {
+                const data = await res.json();
+                leaderboard = Array.isArray(data) ? data : [];
+                updateLeaderboardPanel();
+                return;
+            }
+        } catch (e) {
+            // ignore and try localStorage fallback
+        }
         try {
             const data = localStorage.getItem('highscores');
             if (data) leaderboard = JSON.parse(data);
@@ -13,11 +24,12 @@ window.addEventListener('load', function(){
         } catch (e) {
             leaderboard = [];
         }
+        updateLeaderboardPanel();
     }
 
-    // Helper: save leaderboard to localStorage
+    // Helper: save leaderboard to localStorage (fallback only)
     function saveLeaderboard() {
-        localStorage.setItem('highscores', JSON.stringify(leaderboard));
+        try { localStorage.setItem('highscores', JSON.stringify(leaderboard)); } catch(e){}
     }
 
     // Helper: update leaderboard panel
@@ -38,8 +50,27 @@ window.addEventListener('load', function(){
         return leaderboard.some(entry => score > entry.score);
     }
 
-    // Helper: add new highscore
-    function addHighscore(name, score) {
+    // Helper: add new highscore (posts to server; falls back to localStorage)
+    async function addHighscore(name, score) {
+        // try server
+        try {
+            const res = await fetch('/api/highscores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.slice(0,8), score: Number(score) })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                leaderboard = Array.isArray(data) ? data : leaderboard;
+                updateLeaderboardPanel();
+                saveLeaderboard();
+                return;
+            }
+        } catch (e) {
+            // server not available, fallback below
+        }
+
+        // fallback: update locally
         const now = new Date();
         const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         leaderboard.push({ name: name.slice(0,8), score, date: dateStr });
