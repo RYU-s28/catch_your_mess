@@ -158,13 +158,27 @@ window.addEventListener('load', function(){
         input.maxLength = 8;
         input.placeholder = '_';
         input.autofocus = true;
+        input.style.width = '100%';
+        input.style.padding = '8px';
+        input.style.marginBottom = '12px';
+        input.style.fontSize = '16px';
+        input.style.border = '2px solid #ccc';
+        input.style.borderRadius = '6px';
         popup.appendChild(input);
 
         // Blinking cursor effect via placeholder and CSS
 
         const submitBtn = document.createElement('button');
         submitBtn.textContent = 'SUBMIT';
-        submitBtn.style.marginTop = '18px';
+        submitBtn.style.marginTop = '12px';
+        submitBtn.style.padding = '10px 24px';
+        submitBtn.style.fontSize = '14px';
+        submitBtn.style.fontWeight = '600';
+        submitBtn.style.background = 'linear-gradient(135deg,#4d79bc,#3d5fa8)';
+        submitBtn.style.color = '#fff';
+        submitBtn.style.border = 'none';
+        submitBtn.style.borderRadius = '6px';
+        submitBtn.style.cursor = 'pointer';
         popup.appendChild(submitBtn);
 
         submitBtn.onclick = () => {
@@ -181,21 +195,79 @@ window.addEventListener('load', function(){
     // Load leaderboard on start
     loadLeaderboard();
     updateLeaderboardPanel();
-    // canvas setup (portrait-first logical resolution)
-    const canvas = document.getElementById('gameCanvas') || document.getElementById('canvas1');
-    const ctx = canvas.getContext('2d');
 
-    // Logical resolution used for drawing. CSS controls display size and scaling.
+    // canvas setup with devicePixelRatio scaling for crisp rendering
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // Logical resolution used for drawing (game coordinates)
     const LOGICAL_WIDTH = 480;
     const LOGICAL_HEIGHT = 800;
-    canvas.width = LOGICAL_WIDTH;
-    canvas.height = LOGICAL_HEIGHT;
+    const dpr = window.devicePixelRatio || 1;
 
-    // side-panel stat elements (optional - present in desktop layout)
-    const statScoreEl = document.getElementById('statScore');
-    const statBombsEl = document.getElementById('statBombs');
-    const statLevelEl = document.getElementById('statLevel');
-    const statSpeedEl = document.getElementById('statSpeed');
+    // Set canvas physical resolution and scale context
+    canvas.width = LOGICAL_WIDTH * dpr;
+    canvas.height = LOGICAL_HEIGHT * dpr;
+    // Keep CSS size for display (the CSS file sets width/height)
+    canvas.style.width = LOGICAL_WIDTH + 'px';
+    canvas.style.height = LOGICAL_HEIGHT + 'px';
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Sprite image assets
+    const sprites = {
+        basket: null,
+        goodDrops: [], // array of good drop images (6 variants: bun, coin, corn, nacho, octopus, skewer)
+        badDrop: null,  // rubish.png
+        bomb: null      // dynamite.png
+    };
+
+    // Load sprite images
+    async function loadSprites(){
+        const baseUrl = 'assets/images/';
+        
+        // Load basket
+        sprites.basket = new Image();
+        sprites.basket.src = baseUrl + 'basket.png';
+        
+        // Load 6 good drops (equal probability)
+        const goodNames = ['bun', 'coin', 'corn', 'nacho', 'octupus', 'skewer'];
+        for(const name of goodNames){
+            const img = new Image();
+            img.src = baseUrl + 'good_drops/' + name + '.png';
+            sprites.goodDrops.push(img);
+        }
+        
+        // Load bad drop (rubish)
+        sprites.badDrop = new Image();
+        sprites.badDrop.src = baseUrl + 'bad_drops/rubish.png';
+        
+        // Load bomb (dynamite)
+        sprites.bomb = new Image();
+        sprites.bomb.src = baseUrl + 'bad_drops/dynamite.png';
+    }
+
+    // Helper to get random good drop sprite
+    function getRandomGoodDrop(){
+        return sprites.goodDrops[Math.floor(Math.random() * sprites.goodDrops.length)];
+    }
+
+    // UI DOM elements (we update these instead of drawing HUD on canvas)
+    const uiScore = document.getElementById('uiScore');
+    const uiLevel = document.getElementById('uiLevel');
+    const uiBombs = document.getElementById('uiBombs');
+    const uiSpeed = document.getElementById('uiSpeed');
+    const gameOverModal = document.getElementById('gameOverModal');
+    const finalScoreEl = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
+    if(restartBtn) restartBtn.addEventListener('click', () => window.location.reload());
+
+    // Load sprites immediately
+    loadSprites();
+
+    // Preload bomb sound effect (flashbang)
+    const bombAudio = new Audio('assets/audio/flashbang.mp3');
+    bombAudio.volume = 0.7;
 
     // Game state (aligned with user's requested variables)
     let items = [];           // list of active falling objects
@@ -210,10 +282,13 @@ window.addEventListener('load', function(){
     let bombsCaught = 0;
     const maxBombs = 3;
     let gameOver = false;
+    let paused = false;
+    let bombFlashing = false; // flag to indicate bomb flash is active
+    let trashOverlay = false; // flag to render grey overlay when collecting trash
 
-    // Basket (orange rectangle)
+    // Basket (original placeholder dimensions)
     const basket = {
-        width: Math.max(80, Math.floor(canvas.width * 0.12)),
+        width: Math.max(80, Math.floor(LOGICAL_WIDTH * 0.12)),
         height: 28,
         x: 0,
         y: 0,
@@ -221,8 +296,8 @@ window.addEventListener('load', function(){
     };
 
     function resetBasketPosition(){
-        basket.x = (canvas.width - basket.width) / 2;
-        basket.y = canvas.height - basket.height - 30;
+        basket.x = (LOGICAL_WIDTH - basket.width) / 2;
+        basket.y = LOGICAL_HEIGHT - basket.height - 30;
     }
     resetBasketPosition();
 
@@ -243,12 +318,12 @@ window.addEventListener('load', function(){
     // convert pointer position from CSS pixels to canvas logical coordinates
     canvas.addEventListener('pointermove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const xCanvas = (e.clientX - rect.left) * scaleX;
-        basket.x = xCanvas - basket.width / 2;
-        // constrain immediately
+        const scaleX = LOGICAL_WIDTH / rect.width; // logical / css
+        const xGame = (e.clientX - rect.left) * scaleX;
+        basket.x = xGame - basket.width / 2;
+        // constrain immediately in logical coords
         if(basket.x < 0) basket.x = 0;
-        if(basket.x + basket.width > canvas.width) basket.x = canvas.width - basket.width;
+        if(basket.x + basket.width > LOGICAL_WIDTH) basket.x = LOGICAL_WIDTH - basket.width;
     });
 
     // Spawn settings
@@ -259,26 +334,26 @@ window.addEventListener('load', function(){
         // enforce max items
         if(items.length >= maxItems) return;
 
-        const x = Math.random() * (canvas.width - 60) + 30;
-        const r = 12 + Math.random() * 14; // size (used as radius / half-size)
+        const x = Math.random() * (LOGICAL_WIDTH - 60) + 30;
+        const r = 24 + Math.random() * 22; // size (used as radius / half-size) - increased from 12-26 to 24-46
         const p = Math.random();
         let type = 'good';
         if(p < 0.6) type = 'good';
         else if(p < 0.9) type = 'bad';
         else type = 'bomb';
 
-        // map types to shapes (geometric placeholders)
-        let shape = 'circle';
-        if(type === 'good') shape = 'circle';
-        else if(type === 'bad') shape = 'square';
-        else if(type === 'bomb') shape = 'triangle';
+        // Get sprite for this item
+        let sprite = null;
+        if(type === 'good') sprite = getRandomGoodDrop();
+        else if(type === 'bad') sprite = sprites.badDrop;
+        else if(type === 'bomb') sprite = sprites.bomb;
 
         // per-item base vertical speed; global `fallSpeed` will be added each frame
         let vy = 0.8 + Math.random() * 1.8;
         if(type === 'bad') vy += 0.6;
         if(type === 'bomb') vy += 0.2;
 
-        items.push({ x, y: -r - 10, r, type, shape, vy });
+        items.push({ x, y: -r - 10, r, type, sprite, vy });
     }
 
     // Start spawning (uses `spawnInterval` variable)
@@ -289,7 +364,7 @@ window.addEventListener('load', function(){
 
     // Level tracking (no timer)
     let tickIntervalId = setInterval(()=>{
-        if(gameOver) return;
+        if(gameOver || paused) return;
         levelElapsed += 1;
 
         // level up when enough seconds passed
@@ -330,14 +405,14 @@ window.addEventListener('load', function(){
 
     // Game loop
     function update(){
-        if(gameOver) return;
+        if(gameOver || paused) return;
 
         // Move basket
         if(keys.left) basket.x -= basket.speed;
         if(keys.right) basket.x += basket.speed;
-        // constrain
+        // constrain (use logical width)
         if(basket.x < 0) basket.x = 0;
-        if(basket.x + basket.width > canvas.width) basket.x = canvas.width - basket.width;
+        if(basket.x + basket.width > LOGICAL_WIDTH) basket.x = LOGICAL_WIDTH - basket.width;
 
         // Update items
         for(let i = items.length - 1; i >= 0; i--){
@@ -352,10 +427,12 @@ window.addEventListener('load', function(){
                     score += 5;
                 } else if(it.type === 'bad'){
                     score = Math.max(0, score - 8);
+                    // show a grey overlay briefly when player collects trash
+                    triggerTrashOverlay();
                 } else if(it.type === 'bomb'){
                     bombsCaught += 1;
-                    // penalty for bombs
-                    score = Math.max(0, score - 20);
+                    // Flash canvas white for 1ms instead of minus points
+                    triggerBombFlash();
                     if(bombsCaught >= maxBombs) endGame();
                 }
                 // remove
@@ -364,7 +441,7 @@ window.addEventListener('load', function(){
             }
 
             // missed (fell beyond bottom)
-            if(it.y - it.r > canvas.height){
+            if(it.y - it.r > LOGICAL_HEIGHT){
                 if(it.type === 'good'){
                     // treat missing a good item like hitting a bomb: increment bomb count and heavy penalty
                     bombsCaught += 1;
@@ -376,71 +453,114 @@ window.addEventListener('load', function(){
         }
     }
 
+    // Pause / resume helpers
+    function pauseGame(){
+        if(gameOver) return;
+        paused = true;
+        // stop spawning while paused
+        if(spawnTimerId) { clearInterval(spawnTimerId); spawnTimerId = null; }
+        const pm = document.getElementById('pauseModal');
+        if(pm) pm.style.display = 'flex';
+    }
+
+    function resumeGame(){
+        if(gameOver) return;
+        paused = false;
+        // resume spawning
+        if(!spawnTimerId) startSpawning();
+        const pm = document.getElementById('pauseModal');
+        if(pm) pm.style.display = 'none';
+    }
+
+    // Hook ESC to toggle pause
+    window.addEventListener('keydown', (e) => {
+        if(e.key === 'Escape'){
+            e.preventDefault();
+            if(!paused) pauseGame(); else resumeGame();
+        }
+    });
+
+    // Pause modal button handlers
+    const continueBtn = document.getElementById('continueBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const quitBtn = document.getElementById('quitBtn');
+    if(continueBtn) continueBtn.addEventListener('click', resumeGame);
+    if(resetBtn) resetBtn.addEventListener('click', () => window.location.reload());
+    if(quitBtn) quitBtn.addEventListener('click', () => { window.location.href = '/'; });
+
     function draw(){
-        // clear
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+        // clear logical canvas area
+        ctx.clearRect(0,0,LOGICAL_WIDTH,LOGICAL_HEIGHT);
 
-        // background (canvas CSS sets color but draw a rect too to be consistent)
-        ctx.fillStyle = '#4d79bc';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+        // If bomb flash is active, render white screen
+        if(bombFlashing){
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+            return; // Skip drawing game objects while flashing
+        }
 
-        // draw basket
+        // Draw basket (placeholder rectangle)
         ctx.fillStyle = 'orange';
         ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
 
-        // draw items (geometric shapes)
+        // Draw items (sprites)
         for(const it of items){
-            if(it.type === 'good') ctx.fillStyle = '#ffd24a';
-            else if(it.type === 'bad') ctx.fillStyle = '#9aa0a6';
-            else if(it.type === 'bomb') ctx.fillStyle = '#ff5c5c';
-
-            if(it.shape === 'circle'){
-                ctx.beginPath();
-                ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
-                ctx.fill();
-            } else if(it.shape === 'square'){
-                ctx.fillRect(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2);
-            } else if(it.shape === 'triangle'){
-                ctx.beginPath();
-                ctx.moveTo(it.x, it.y - it.r);
-                ctx.lineTo(it.x - it.r, it.y + it.r);
-                ctx.lineTo(it.x + it.r, it.y + it.r);
-                ctx.closePath();
-                ctx.fill();
+            if(it.sprite && it.sprite.complete){
+                // Draw sprite centered at (it.x, it.y) with size 2*it.r
+                const size = it.r * 2;
+                ctx.drawImage(it.sprite, it.x - it.r, it.y - it.r, size, size);
             } else {
-                // fallback: circle
+                // Fallback: colored circles if sprite not loaded
+                if(it.type === 'good') ctx.fillStyle = '#ffd24a';
+                else if(it.type === 'bad') ctx.fillStyle = '#9aa0a6';
+                else if(it.type === 'bomb') ctx.fillStyle = '#ff5c5c';
+
                 ctx.beginPath();
                 ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // HUD
-        ctx.fillStyle = 'white';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'left';
-    ctx.fillText('Score: ' + score, 18, 28);
-    ctx.fillText('Bombs: ' + bombsCaught + ' / ' + maxBombs, 18, 56);
-    ctx.fillText('Level: ' + level, 18, 84);
-    ctx.fillText('Fall speed: ' + fallSpeed.toFixed(2), 18, 112);
+        // If trash overlay active, draw semi-opaque grey layer (50% opacity)
+        if(trashOverlay){
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        }
+    }
 
-    // update side-panel stats if present
-    if(statScoreEl) statScoreEl.textContent = 'Score: ' + score;
-    if(statBombsEl) statBombsEl.textContent = 'Bombs: ' + bombsCaught + ' / ' + maxBombs;
-    if(statLevelEl) statLevelEl.textContent = 'Level: ' + level;
-    if(statSpeedEl) statSpeedEl.textContent = 'Speed: ' + fallSpeed.toFixed(2);
+    // Flash canvas white when bomb is hit
+    function triggerBombFlash(){
+        bombFlashing = true;
+        // play sound (best-effort)
+        try {
+            if(bombAudio){
+                bombAudio.currentTime = 0;
+                const p = bombAudio.play();
+                if(p && typeof p.then === 'function') p.catch(()=>{});
+            }
+        } catch (e) {}
 
-        if(gameOver){
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-            ctx.font = '48px sans-serif';
-            ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
-            ctx.font = '28px sans-serif';
-            ctx.fillText('Final Score: ' + score, canvas.width/2, canvas.height/2 + 30);
-            ctx.font = '20px sans-serif';
-            ctx.fillText('Press F5 to play again', canvas.width/2, canvas.height/2 + 70);
+        // Reset after 1 second
+        setTimeout(() => {
+            bombFlashing = false;
+        }, 1000);
+    }
+
+    // Show a brief grey overlay when collecting trash
+    function triggerTrashOverlay(){
+        trashOverlay = true;
+        setTimeout(() => { trashOverlay = false; }, 3000);
+    }
+
+    // Update UI overlay (stats and game-over)
+    function updateUI(){
+        if(uiScore) uiScore.textContent = score;
+        if(uiLevel) uiLevel.textContent = level;
+        if(uiBombs) uiBombs.textContent = bombsCaught + '/' + maxBombs;
+        if(uiSpeed) uiSpeed.textContent = fallSpeed.toFixed(2);
+        if(gameOver && gameOverModal){
+            if(finalScoreEl) finalScoreEl.textContent = score;
+            gameOverModal.style.display = 'flex';
         }
     }
 
@@ -448,6 +568,7 @@ window.addEventListener('load', function(){
     function loop(){
         update();
         draw();
+        updateUI();
         if(!gameOver) requestAnimationFrame(loop);
     }
 

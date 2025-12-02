@@ -9,12 +9,63 @@
 </head>
 <body>
   <div class="game-container">
-    <canvas id="gameCanvas" aria-label="Catch your mess game"></canvas>
-    <div class="side-panel leaderboard-panel" aria-hidden="true">
-      <h2>Leaderboard</h2>
-      <ol id="leaderboardList" class="pixel-font">
-        <!-- Leaderboard entries will be injected here -->
-      </ol>
+    <div class="game-viewport">
+      <canvas id="gameCanvas" aria-label="Catch your mess game"></canvas>
+
+      <!-- UI overlay (HTML/CSS) -- stats, title, game over -->
+      <div class="ui-overlay" aria-hidden="false">
+        <header class="ui-header">
+          <h1 class="game-title">Catch Your Mess!</h1>
+          <div class="stats-bar">
+            <div class="stat-card">
+              <div class="stat-label">Score</div>
+              <div class="stat-value" id="uiScore">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Level</div>
+              <div class="stat-value" id="uiLevel">1</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Bombs</div>
+              <div class="stat-value" id="uiBombs">0/3</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Speed</div>
+              <div class="stat-value" id="uiSpeed">1.00</div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Game over modal -->
+        <div id="gameOverModal" class="game-over-modal" style="display:none;">
+          <div class="game-over-content">
+            <h2>GAME OVER</h2>
+            <p class="final-score">Final Score: <span id="finalScore">0</span></p>
+            <button class="restart-btn" id="restartBtn">Play Again</button>
+          </div>
+        </div>
+
+        <!-- Pause modal (ESC to open) -->
+        <div id="pauseModal" class="game-over-modal" style="display:none;">
+          <div class="game-over-content">
+            <h2>PAUSED</h2>
+            <p class="final-score">Game is paused</p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+              <button class="restart-btn" id="continueBtn">Continue</button>
+              <button class="restart-btn" id="resetBtn">Reset</button>
+              <button class="restart-btn" id="quitBtn">Quit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard panel -->
+      <div class="side-panel leaderboard-panel" aria-hidden="true">
+        <h2>Top 10</h2>
+        <ol id="leaderboardList">
+          <!-- Leaderboard entries will be injected here -->
+        </ol>
+      </div>
     </div>
   </div>
 
