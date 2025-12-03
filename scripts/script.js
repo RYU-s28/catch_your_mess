@@ -220,7 +220,9 @@ window.addEventListener('load', function(){
         goodDrops: [], // array of good drop images (6 variants: bun, coin, corn, nacho, octopus, skewer)
         badDrop: null,  // rubish.png
         bomb: null,     // dynamite.png
-        health: null    // health.png (healing powerup)
+        health: null,   // health.png (healing powerup)
+        healthIcon: null,  // health.png (for HUD display)
+        brokenHealthIcon: null  // broken_health.png (for HUD display)
     };
 
     // Load sprite images
@@ -250,6 +252,13 @@ window.addEventListener('load', function(){
         // Load health powerup
         sprites.health = new Image();
         sprites.health.src = baseUrl + 'health.png';
+        
+        // Load health HUD icons
+        sprites.healthIcon = new Image();
+        sprites.healthIcon.src = baseUrl + 'health.png';
+        
+        sprites.brokenHealthIcon = new Image();
+        sprites.brokenHealthIcon.src = baseUrl + 'broken_health.png';
     }
 
     // Helper to get random good drop sprite
@@ -273,6 +282,10 @@ window.addEventListener('load', function(){
     // Preload bomb sound effect (flashbang)
     const bombAudio = new Audio('assets/audio/flashbang.mp3');
     bombAudio.volume = 0.7;
+
+    // Preload heal sound effect
+    const healAudio = new Audio('assets/audio/Heal.mp3');
+    healAudio.volume = 0.6;
 
     // Preload background music
     const backgroundMusic = new Audio('assets/audio/matsuri_background.mp3');
@@ -300,6 +313,9 @@ window.addEventListener('load', function(){
     let trashOverlay = false; // flag to render grey overlay when collecting trash
     let isImmune = false; // flag to indicate immunity period after bomb hit
     let immunityEndTime = 0; // timestamp when immunity ends
+    
+    // Heart system: track which hearts are broken (true = broken, false = healthy)
+    let hearts = [false, false, false]; // 3 hearts, all start healthy
 
     // Basket (original placeholder dimensions)
     const basket = {
@@ -501,6 +517,13 @@ window.addEventListener('load', function(){
                     // Only apply bomb damage if not immune
                     if(!isImmune){
                         bombsCaught += 1;
+                        // Mark the rightmost healthy heart as broken
+                        for(let h = hearts.length - 1; h >= 0; h--){
+                            if(!hearts[h]){
+                                hearts[h] = true; // mark as broken
+                                break;
+                            }
+                        }
                         // Flash canvas white for 1ms instead of minus points
                         triggerBombFlash();
                         // Grant immunity for 2 seconds (2000ms)
@@ -511,6 +534,21 @@ window.addEventListener('load', function(){
                 } else if(it.type === 'health'){
                     // Health powerup: reduce strikes by 1 (cannot go below 0)
                     bombsCaught = Math.max(0, bombsCaught - 1);
+                    // Heal the leftmost broken heart
+                    for(let h = 0; h < hearts.length; h++){
+                        if(hearts[h]){
+                            hearts[h] = false; // mark as healthy
+                            break;
+                        }
+                    }
+                    // Play heal sound
+                    try {
+                        if(healAudio){
+                            healAudio.currentTime = 0;
+                            const p = healAudio.play();
+                            if(p && typeof p.then === 'function') p.catch(()=>{});
+                        }
+                    } catch (e) {}
                     score += 10; // bonus points for catching health
                 }
                 // remove
@@ -523,6 +561,13 @@ window.addEventListener('load', function(){
                 if(it.type === 'good'){
                     // treat missing a good item like hitting a bomb: increment bomb count and heavy penalty
                     bombsCaught += 1;
+                    // Mark the rightmost healthy heart as broken
+                    for(let h = hearts.length - 1; h >= 0; h--){
+                        if(!hearts[h]){
+                            hearts[h] = true; // mark as broken
+                            break;
+                        }
+                    }
                     score = Math.max(0, score - 20);
                     if(bombsCaught >= maxBombs) endGame();
                 }
@@ -665,6 +710,38 @@ window.addEventListener('load', function(){
         if(trashOverlay){
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        }
+        
+        // Draw hearts HUD (centered at top)
+        const heartSize = 80; // increased from 40 to 80 (2x)
+        const heartSpacing = 20; // increased from 10 to 20 (2x)
+        const totalHeartsWidth = (heartSize * hearts.length) + (heartSpacing * (hearts.length - 1));
+        const heartStartX = (LOGICAL_WIDTH - totalHeartsWidth) / 2; // centered
+        const heartStartY = 20;
+        
+        for(let i = 0; i < hearts.length; i++){
+            const heartX = heartStartX + (i * (heartSize + heartSpacing));
+            const heartY = heartStartY;
+            
+            if(hearts[i]){
+                // Draw broken heart
+                if(sprites.brokenHealthIcon && sprites.brokenHealthIcon.complete){
+                    ctx.drawImage(sprites.brokenHealthIcon, heartX, heartY, heartSize, heartSize);
+                } else {
+                    // Fallback: draw red X
+                    ctx.fillStyle = 'rgba(255,0,0,0.7)';
+                    ctx.fillRect(heartX, heartY, heartSize, heartSize);
+                }
+            } else {
+                // Draw healthy heart
+                if(sprites.healthIcon && sprites.healthIcon.complete){
+                    ctx.drawImage(sprites.healthIcon, heartX, heartY, heartSize, heartSize);
+                } else {
+                    // Fallback: draw green square
+                    ctx.fillStyle = 'rgba(0,255,0,0.7)';
+                    ctx.fillRect(heartX, heartY, heartSize, heartSize);
+                }
+            }
         }
     }
 
