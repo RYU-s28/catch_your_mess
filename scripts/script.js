@@ -219,7 +219,8 @@ window.addEventListener('load', function(){
         basket: null,
         goodDrops: [], // array of good drop images (6 variants: bun, coin, corn, nacho, octopus, skewer)
         badDrop: null,  // rubish.png
-        bomb: null      // dynamite.png
+        bomb: null,     // dynamite.png
+        health: null    // health.png (healing powerup)
     };
 
     // Load sprite images
@@ -245,6 +246,10 @@ window.addEventListener('load', function(){
         // Load bomb (dynamite)
         sprites.bomb = new Image();
         sprites.bomb.src = baseUrl + 'bad_drops/dynamite.png';
+        
+        // Load health powerup
+        sprites.health = new Image();
+        sprites.health.src = baseUrl + 'health.png';
     }
 
     // Helper to get random good drop sprite
@@ -293,6 +298,8 @@ window.addEventListener('load', function(){
     let paused = false;
     let bombFlashing = false; // flag to indicate bomb flash is active
     let trashOverlay = false; // flag to render grey overlay when collecting trash
+    let isImmune = false; // flag to indicate immunity period after bomb hit
+    let immunityEndTime = 0; // timestamp when immunity ends
 
     // Basket (original placeholder dimensions)
     const basket = {
@@ -357,10 +364,17 @@ window.addEventListener('load', function(){
         // First object is always good
         let type = 'good';
         if(firstObjectSpawned){
-            const p = Math.random();
-            if(p < 0.6) type = 'good';
-            else if(p < 0.9) type = 'bad';
-            else type = 'bomb';
+            // Check if we should spawn a health powerup (2% chance when player has strikes)
+            // Only spawn if player has strikes AND no health powerup is currently on screen
+            const hasHealthOnScreen = items.some(item => item.type === 'health');
+            if(bombsCaught > 0 && !hasHealthOnScreen && Math.random() < 0.02){
+                type = 'health';
+            } else {
+                const p = Math.random();
+                if(p < 0.6) type = 'good';
+                else if(p < 0.9) type = 'bad';
+                else type = 'bomb';
+            }
         }
         
         // Get sprite for this item
@@ -368,11 +382,13 @@ window.addEventListener('load', function(){
         if(type === 'good') sprite = getRandomGoodDrop();
         else if(type === 'bad') sprite = sprites.badDrop;
         else if(type === 'bomb') sprite = sprites.bomb;
+        else if(type === 'health') sprite = sprites.health;
 
         // per-item base vertical speed; global `fallSpeed` will be added each frame
         let vy = 0.8 + Math.random() * 1.8;
         if(type === 'bad') vy += 0.6;
         if(type === 'bomb') vy += 0.2;
+        if(type === 'health') vy += 0.4; // health falls at moderate speed
 
         let initialY = -r - 10;
         
@@ -454,6 +470,11 @@ window.addEventListener('load', function(){
     function update(){
         if(gameOver || paused) return;
 
+        // Check if immunity period has expired
+        if(isImmune && Date.now() >= immunityEndTime){
+            isImmune = false;
+        }
+
         // Move basket
         if(keys.left) basket.x -= basket.speed;
         if(keys.right) basket.x += basket.speed;
@@ -477,10 +498,20 @@ window.addEventListener('load', function(){
                     // show a grey overlay briefly when player collects trash
                     triggerTrashOverlay();
                 } else if(it.type === 'bomb'){
-                    bombsCaught += 1;
-                    // Flash canvas white for 1ms instead of minus points
-                    triggerBombFlash();
-                    if(bombsCaught >= maxBombs) endGame();
+                    // Only apply bomb damage if not immune
+                    if(!isImmune){
+                        bombsCaught += 1;
+                        // Flash canvas white for 1ms instead of minus points
+                        triggerBombFlash();
+                        // Grant immunity for 2 seconds (2000ms)
+                        isImmune = true;
+                        immunityEndTime = Date.now() + 2000;
+                        if(bombsCaught >= maxBombs) endGame();
+                    }
+                } else if(it.type === 'health'){
+                    // Health powerup: reduce strikes by 1 (cannot go below 0)
+                    bombsCaught = Math.max(0, bombsCaught - 1);
+                    score += 10; // bonus points for catching health
                 }
                 // remove
                 items.splice(i,1);
@@ -592,6 +623,7 @@ window.addEventListener('load', function(){
             if(it.type === 'good') glowColor = 'rgba(255,214,74,0.95)';
             else if(it.type === 'bad') glowColor = 'rgba(154,160,166,0.85)';
             else if(it.type === 'bomb') glowColor = 'rgba(255,92,92,0.95)';
+            else if(it.type === 'health') glowColor = 'rgba(74,255,144,0.95)'; // green glow for health
 
             // Glow strength scaled to item size
             const glowRadius = Math.max(10, it.r * 0.9);
@@ -608,6 +640,7 @@ window.addEventListener('load', function(){
                 if(it.type === 'good') ctx.fillStyle = '#ffd24a';
                 else if(it.type === 'bad') ctx.fillStyle = '#9aa0a6';
                 else if(it.type === 'bomb') ctx.fillStyle = '#ff5c5c';
+                else if(it.type === 'health') ctx.fillStyle = '#4aff90'; // green for health
 
                 ctx.beginPath();
                 ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
