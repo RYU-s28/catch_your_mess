@@ -269,8 +269,16 @@ window.addEventListener('load', function(){
     const bombAudio = new Audio('assets/audio/flashbang.mp3');
     bombAudio.volume = 0.7;
 
+    // Preload background music
+    const backgroundMusic = new Audio('assets/audio/matsuri_background.mp3');
+    backgroundMusic.volume = 0.5;
+    backgroundMusic.loop = true;
+    let backgroundMusicStarted = false;
+
     // Game state (aligned with user's requested variables)
     let items = [];           // list of active falling objects
+    let firstObjectSpawned = false; // track if first object has been spawned
+    let gameStartTime = null; // track when game started for 7.5 second intro
     const maxItems = 5;       // limit of visible items
     let fallSpeed = 2;        // initial fall speed (pixels/frame)
     let level = 1;            // current difficulty level
@@ -289,7 +297,7 @@ window.addEventListener('load', function(){
     // Basket (original placeholder dimensions)
     const basket = {
         width: Math.max(80, Math.floor(LOGICAL_WIDTH * 0.12)),
-        height: 28,
+        height: 48,
         x: 0,
         y: 0,
         speed: 8
@@ -334,14 +342,27 @@ window.addEventListener('load', function(){
         // enforce max items
         if(items.length >= maxItems) return;
 
+        // Don't spawn more items during the first 9.5 seconds (intro phase)
+        if(gameStartTime !== null){
+            const elapsedTime = Date.now() - gameStartTime;
+            if(elapsedTime < 9500 && firstObjectSpawned){
+                // Still in intro phase and we've already spawned the first item
+                return;
+            }
+        }
+
         const x = Math.random() * (LOGICAL_WIDTH - 60) + 30;
         const r = 24 + Math.random() * 22; // size (used as radius / half-size) - increased from 12-26 to 24-46
-        const p = Math.random();
+        
+        // First object is always good
         let type = 'good';
-        if(p < 0.6) type = 'good';
-        else if(p < 0.9) type = 'bad';
-        else type = 'bomb';
-
+        if(firstObjectSpawned){
+            const p = Math.random();
+            if(p < 0.6) type = 'good';
+            else if(p < 0.9) type = 'bad';
+            else type = 'bomb';
+        }
+        
         // Get sprite for this item
         let sprite = null;
         if(type === 'good') sprite = getRandomGoodDrop();
@@ -353,12 +374,35 @@ window.addEventListener('load', function(){
         if(type === 'bad') vy += 0.6;
         if(type === 'bomb') vy += 0.2;
 
-        items.push({ x, y: -r - 10, r, type, sprite, vy });
+        let initialY = -r - 10;
+        
+        // First item takes 9.5 seconds to fall
+        if(!firstObjectSpawned){
+            // We need to calculate initial Y so item is caught at exactly 9.5 seconds
+            // Physics: y(t) = initialY + vy*t + fallSpeed*0.16*t (summed over frames)
+            // At t=570 frames (9.5s): y = basket.y (collision point)
+            // Basket collision happens when: item.y + item.r >= basket.y
+            // Basket.y = LOGICAL_HEIGHT - basket.height - 30
+            // We want: initialY + (vy + fallSpeed*0.16) * 570 = basket.y + r
+
+            const basketCollisionY = (LOGICAL_HEIGHT - basket.height - 30) + r;
+            const avgVelocityPerFrame = vy + (fallSpeed * 0.16);
+            const framesFor9_5Seconds = 570; // 9.5 * 60
+            const distanceNeeded = avgVelocityPerFrame * framesFor9_5Seconds;
+
+            // initialY + distanceNeeded = basketCollisionY
+            initialY = basketCollisionY - distanceNeeded;
+        }
+        
+        items.push({ x, y: initialY, r, type, sprite, vy });
+        firstObjectSpawned = true;
     }
 
     // Start spawning (uses `spawnInterval` variable)
     function startSpawning(){
         if(spawnTimerId) clearInterval(spawnTimerId);
+        // Spawn first item immediately, then wait 7.5 seconds before spawning more
+        spawnItem();
         spawnTimerId = setInterval(spawnItem, spawnInterval);
     }
 
@@ -384,6 +428,9 @@ window.addEventListener('load', function(){
     function endGame(){
         gameOver = true;
         if(spawnTimerId) clearInterval(spawnTimerId);
+        // Stop background music
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
         // Check for highscore and show popup if needed
         if(isHighscore(score)) {
             setTimeout(() => showNameEntryPopup(score), 600);
@@ -454,20 +501,31 @@ window.addEventListener('load', function(){
     }
 
     // Pause / resume helpers
-    function pauseGame(){
+    // `isUser` indicates the pause/resume was initiated by the player (true)
+    // or automatically by the page visibility/focus handlers (false).
+    let autoPaused = false;
+    let userPaused = false;
+
+    function pauseGame(isUser = true){
         if(gameOver) return;
         paused = true;
+        if(isUser) userPaused = true; else autoPaused = true;
         // stop spawning while paused
         if(spawnTimerId) { clearInterval(spawnTimerId); spawnTimerId = null; }
+        // pause background music
+        if(backgroundMusicStarted) backgroundMusic.pause();
         const pm = document.getElementById('pauseModal');
         if(pm) pm.style.display = 'flex';
     }
 
-    function resumeGame(){
+    function resumeGame(isUser = true){
         if(gameOver) return;
         paused = false;
+        if(isUser) userPaused = false; else autoPaused = false;
         // resume spawning
         if(!spawnTimerId) startSpawning();
+        // resume background music
+        if(backgroundMusicStarted) backgroundMusic.play().catch(()=>{});
         const pm = document.getElementById('pauseModal');
         if(pm) pm.style.display = 'none';
     }
@@ -488,6 +546,24 @@ window.addEventListener('load', function(){
     if(resetBtn) resetBtn.addEventListener('click', () => window.location.reload());
     if(quitBtn) quitBtn.addEventListener('click', () => { window.location.href = '/'; });
 
+    // Auto pause when tab/window is not active. Respect user's manual pause.
+    document.addEventListener('visibilitychange', () => {
+        if(document.hidden){
+            if(!paused) pauseGame(false);
+        } else {
+            // only auto-resume if we auto-paused (and user hasn't manually paused)
+            if(autoPaused && !userPaused) resumeGame(false);
+        }
+    });
+
+    window.addEventListener('blur', () => {
+        if(!paused) pauseGame(false);
+    });
+
+    window.addEventListener('focus', () => {
+        if(autoPaused && !userPaused) resumeGame(false);
+    });
+
     function draw(){
         // clear logical canvas area
         ctx.clearRect(0,0,LOGICAL_WIDTH,LOGICAL_HEIGHT);
@@ -499,15 +575,33 @@ window.addEventListener('load', function(){
             return; // Skip drawing game objects while flashing
         }
 
-        // Draw basket (placeholder rectangle)
-        ctx.fillStyle = 'orange';
-        ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+        // Draw basket sprite (fallback to placeholder if not yet loaded)
+        if (sprites.basket && sprites.basket.complete) {
+            ctx.drawImage(sprites.basket, basket.x, basket.y, basket.width, basket.height);
+        } else {
+            ctx.fillStyle = 'orange';
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+        }
 
-        // Draw items (sprites)
+        // Draw items (sprites) with glow to improve visibility
         for(const it of items){
+            const size = it.r * 2;
+
+            // Choose glow color per item type
+            let glowColor = 'rgba(255,255,255,0.9)';
+            if(it.type === 'good') glowColor = 'rgba(255,214,74,0.95)';
+            else if(it.type === 'bad') glowColor = 'rgba(154,160,166,0.85)';
+            else if(it.type === 'bomb') glowColor = 'rgba(255,92,92,0.95)';
+
+            // Glow strength scaled to item size
+            const glowRadius = Math.max(10, it.r * 0.9);
+
+            ctx.save();
+            ctx.shadowBlur = glowRadius;
+            ctx.shadowColor = glowColor;
+
             if(it.sprite && it.sprite.complete){
                 // Draw sprite centered at (it.x, it.y) with size 2*it.r
-                const size = it.r * 2;
                 ctx.drawImage(it.sprite, it.x - it.r, it.y - it.r, size, size);
             } else {
                 // Fallback: colored circles if sprite not loaded
@@ -519,11 +613,24 @@ window.addEventListener('load', function(){
                 ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // Optional soft outer ring to emphasize the glow (non-shadow)
+            ctx.shadowColor = 'transparent';
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.beginPath();
+            ctx.fillStyle = glowColor;
+            ctx.globalAlpha = 0.12;
+            ctx.arc(it.x, it.y, it.r + glowRadius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.restore();
         }
 
-        // If trash overlay active, draw semi-opaque grey layer (50% opacity)
+        // If trash overlay active, draw semi-opaque grey layer (30% opacity)
         if(trashOverlay){
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
         }
     }
@@ -573,6 +680,24 @@ window.addEventListener('load', function(){
     }
 
     // initialize and start
+    // Set game start time for 7.5 second intro phase
+    gameStartTime = Date.now();
+    
+    // Start background music immediately
+    backgroundMusic.play().then(() => {
+        console.log('Music started');
+        backgroundMusicStarted = true;
+    }).catch((err) => {
+        console.warn('Music autoplay failed:', err);
+        // Try again on user interaction
+        document.addEventListener('click', () => {
+            if(!backgroundMusicStarted){
+                backgroundMusic.play();
+                backgroundMusicStarted = true;
+            }
+        }, { once: true });
+    });
+    
     startSpawning();
     loop();
 });
