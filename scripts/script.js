@@ -323,7 +323,10 @@ window.addEventListener('load', function(){
         height: 48,
         x: 0,
         y: 0,
-        speed: 8
+        speed: 12, // increased from 8 for better responsiveness
+        velocityX: 0, // current velocity for smooth movement
+        acceleration: 1.5, // acceleration rate
+        friction: 0.85 // friction/deceleration factor
     };
 
     function resetBasketPosition(){
@@ -347,7 +350,43 @@ window.addEventListener('load', function(){
 
     // Pointer / mouse control (works for mouse and touch via Pointer Events)
     // convert pointer position from CSS pixels to canvas logical coordinates
+    let activePointerId = null;
+    
+    canvas.addEventListener('pointerdown', (e) => {
+        if(paused || gameOver) return;
+        // Track the first touch/pointer
+        if(activePointerId === null) {
+            activePointerId = e.pointerId;
+            canvas.setPointerCapture(e.pointerId);
+            updateBasketPosition(e);
+        }
+        e.preventDefault(); // prevent scrolling and other default behaviors
+    });
+    
     canvas.addEventListener('pointermove', (e) => {
+        // Don't update basket position when paused or game over
+        if(paused || gameOver) return;
+        
+        // Only respond to the active pointer (prevents multi-touch issues)
+        if(activePointerId !== null && e.pointerId !== activePointerId) return;
+        
+        updateBasketPosition(e);
+        e.preventDefault();
+    });
+    
+    canvas.addEventListener('pointerup', (e) => {
+        if(e.pointerId === activePointerId) {
+            activePointerId = null;
+        }
+    });
+    
+    canvas.addEventListener('pointercancel', (e) => {
+        if(e.pointerId === activePointerId) {
+            activePointerId = null;
+        }
+    });
+    
+    function updateBasketPosition(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = LOGICAL_WIDTH / rect.width; // logical / css
         const xGame = (e.clientX - rect.left) * scaleX;
@@ -355,7 +394,7 @@ window.addEventListener('load', function(){
         // constrain immediately in logical coords
         if(basket.x < 0) basket.x = 0;
         if(basket.x + basket.width > LOGICAL_WIDTH) basket.x = LOGICAL_WIDTH - basket.width;
-    });
+    }
 
     // Spawn settings
     let spawnTimerId = null;
@@ -491,12 +530,31 @@ window.addEventListener('load', function(){
             isImmune = false;
         }
 
-        // Move basket
-        if(keys.left) basket.x -= basket.speed;
-        if(keys.right) basket.x += basket.speed;
+        // Move basket with smooth acceleration
+        if(keys.left) {
+            basket.velocityX -= basket.acceleration;
+            if(basket.velocityX < -basket.speed) basket.velocityX = -basket.speed;
+        } else if(keys.right) {
+            basket.velocityX += basket.acceleration;
+            if(basket.velocityX > basket.speed) basket.velocityX = basket.speed;
+        } else {
+            // Apply friction when no keys are pressed
+            basket.velocityX *= basket.friction;
+            if(Math.abs(basket.velocityX) < 0.1) basket.velocityX = 0;
+        }
+        
+        // Update position based on velocity
+        basket.x += basket.velocityX;
+        
         // constrain (use logical width)
-        if(basket.x < 0) basket.x = 0;
-        if(basket.x + basket.width > LOGICAL_WIDTH) basket.x = LOGICAL_WIDTH - basket.width;
+        if(basket.x < 0) {
+            basket.x = 0;
+            basket.velocityX = 0; // stop velocity at boundary
+        }
+        if(basket.x + basket.width > LOGICAL_WIDTH) {
+            basket.x = LOGICAL_WIDTH - basket.width;
+            basket.velocityX = 0; // stop velocity at boundary
+        }
 
         // Update items
         for(let i = items.length - 1; i >= 0; i--){

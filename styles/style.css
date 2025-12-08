@@ -37,6 +37,10 @@ html, body {
     border-radius: 10px;
     box-shadow: 0 24px 60px rgba(0,0,0,0.35);
     image-rendering: crisp-edges; /* improve scaled rendering */
+    cursor: none; /* hide mouse cursor over canvas */
+    touch-action: none; /* prevent default touch behaviors like scrolling/zooming */
+    -webkit-user-select: none; /* prevent text selection on touch */
+    user-select: none;
 }
 
 /* UI overlay */
