@@ -405,6 +405,13 @@ window.addEventListener('load', function(){
             "You're FAILING! Get it together! 危險！",
             "One more mistake and you're DONE!"
         ],
+        healthSpawned: [
+            "HEALTH! Get it NOW! 快接！",
+            "Green one! That's HEALTH! Catch it! 接住！",
+            "DON'T MISS THE HEALTH! 別錯過！",
+            "Health powerup! MOVE! 快動！",
+            "That's your lifeline! GET IT! 救命的！"
+        ],
         healthPickup: [
             "Lucky catch! Don't waste it! 別浪費！",
             "Finally! Maybe you'll last longer now.",
@@ -695,11 +702,13 @@ window.addEventListener('load', function(){
         // First object is always good
         let type = 'good';
         if(firstObjectSpawned){
-            // Check if we should spawn a health powerup (2% chance when player has strikes)
+            // Check if we should spawn a health powerup (1% chance when player has strikes)
             // Only spawn if player has strikes AND no health powerup is currently on screen
             const hasHealthOnScreen = items.some(item => item.type === 'health');
-            if(bombsCaught > 0 && !hasHealthOnScreen && Math.random() < 0.02){
+            if(bombsCaught > 0 && !hasHealthOnScreen && Math.random() < 0.01){
                 type = 'health';
+                // Ayiee alerts player about health spawn!
+                showAyieeDialogue('healthSpawned', 3500);
             } else {
                 const p = Math.random();
                 if(p < 0.6) type = 'good';
