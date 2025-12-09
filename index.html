@@ -9,6 +9,23 @@
 </head>
 <body>
   <div class="game-container">
+    <!-- Pause/ESC Button -->
+    <button class="pause-btn" id="pauseBtn" aria-label="Pause Game">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="4" width="4" height="16" fill="currentColor" rx="1"/>
+        <rect x="14" y="4" width="4" height="16" fill="currentColor" rx="1"/>
+      </svg>
+      <span class="pause-text">ESC</span>
+    </button>
+
+    <!-- Leaderboard Toggle Button -->
+    <button class="leaderboard-toggle-btn" id="leaderboardToggleBtn" aria-label="Toggle Leaderboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="leaderboard-text">Top 10</span>
+    </button>
+
     <!-- Paper Mario-style Score Display -->
     <div class="score-display" id="scoreDisplay">
       <div class="score-label">SCORE</div>
@@ -66,7 +83,7 @@
       </div>
 
       <!-- Leaderboard panel -->
-      <div class="side-panel leaderboard-panel" aria-hidden="true">
+      <div class="side-panel leaderboard-panel" id="leaderboardPanel" aria-hidden="true">
         <h2>Top 10</h2>
         <ol id="leaderboardList">
           <!-- Leaderboard entries will be injected here -->

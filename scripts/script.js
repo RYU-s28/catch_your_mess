@@ -354,67 +354,95 @@ window.addEventListener('load', function(){
     const dialogueText = document.getElementById('dialogueText');
     let currentDialogueTimeout = null;
     let lastDialogueTime = 0;
-    const dialogueCooldown = 8000; // 8 seconds between dialogues
+    const dialogueCooldown = 3000; // 3 seconds between dialogues - reduced for more frequent commenting
 
     // Dialogue library
     const dialogues = {
         welcome: [
             "Ayie! You made this mess! Now catch it all!",
-            "Welcome to my night market! Clean up your chaos!",
-            "Use arrow keys or touch to move the basket!"
+            "You think this is a game? Clean up NOW!",
+            "Listen up! Don't embarrass me in front of customers!"
         ],
         goodCatch: [
-            "Hao! Good catch! 好！",
-            "That's the spirit! Keep going!",
-            "Nicely done! 厲害！",
-            "You're getting better at this!",
-            "Excellent! 太棒了！"
+            "Hao! Finally doing something right! 好！",
+            "About time you caught something!",
+            "Hmph! Not bad... for once.",
+            "Keep going! Don't mess it up!",
+            "That's more like it! 還可以！"
         ],
         multipleCatch: [
-            "Wow! You're on fire! 🔥",
-            "Amazing streak! 連續得分！",
-            "Can't stop won't stop!",
-            "Look at you go! 真厲害！"
+            "Wah! Maybe you're not totally useless! 🔥",
+            "Finally! A decent streak! 連續得分！",
+            "Don't get cocky now!",
+            "Okay okay, not bad! 還不錯！"
         ],
         bombHit: [
-            "Aiyah! Watch out for bombs! 小心！",
-            "That's dangerous! Be careful!",
-            "Bombs are bad! Avoid them! 避開！",
-            "Ouch! That must hurt!"
+            "AIYAH! Are you BLIND?! 瞎了嗎？",
+            "ARE YOU TRYING TO GET US KILLED?!",
+            "What's WRONG with you?! 避開炸彈！",
+            "My stall! MY STALL! You idiot!",
+            "Do you have EYES?! 小心一點！",
+            "Useless! Absolutely USELESS! 沒用！"
         ],
         trashCatch: [
-            "Eww! That's trash! 髒東西！",
-            "No no! Don't catch the bad stuff!",
-            "That's buhao dongxi! 壞東西！",
-            "Ayie! Wrong thing!"
+            "STOP! You're ruining my merchandise! 髒東西！",
+            "What are you DOING?! That's trash!",
+            "You better get your act together! 壞東西！",
+            "Are you STUPID?! Don't catch that!",
+            "My inventory! You're destroying it! 笨蛋！",
+            "This is why I can't have nice things!",
+            "You're costing me money! 賠錢貨！"
         ],
         levelUp: [
-            "It's getting faster! 加油！",
-            "Next level! Can you keep up?",
-            "Things are speeding up! 小心！",
-            "Higher difficulty! Good luck!"
+            "Too slow! Let's see if you can handle THIS!",
+            "Faster now! Try to keep up! 跟上！",
+            "Getting too easy? Not anymore!",
+            "Think you're good? Watch this!"
         ],
         lowHealth: [
-            "Careful! You're running out of hearts! 危險！",
-            "Watch your health! 注意生命值！",
-            "Not many hearts left! Be careful!"
+            "Look at you! Almost dead! 快死了！",
+            "Pathetic! Can't even stay alive! 沒用！",
+            "You're FAILING! Get it together! 危險！",
+            "One more mistake and you're DONE!"
         ],
         healthPickup: [
-            "Health restored! 恢復了！",
-            "Good as new! 好了！",
-            "Feeling better? 好多了！"
+            "Lucky catch! Don't waste it! 別浪費！",
+            "Finally! Maybe you'll last longer now.",
+            "About time you got some health!"
         ],
         highScore: [
-            "Wah! Such high score! 好厲害！",
-            "You're doing amazing! 太棒了！",
-            "Breaking records here!",
-            "Impressive skills! 真厲害！"
+            "Hmph! Not bad... I guess. 還可以！",
+            "Keep it up! Don't disappoint me!",
+            "Finally earning your keep!",
+            "Impressive... for a klutz! 厲害！"
         ],
         encouragement: [
-            "Don't give up! 加油！",
-            "You can do it! 繼續努力！",
-            "Keep trying! Almost there!",
-            "Come on! 加油加油！"
+            "Come on! Stop being useless! 加油！",
+            "You can do BETTER than this!",
+            "Is this really your best?! 繼續！",
+            "Don't give up NOW! Keep going!"
+        ],
+        missedItem: [
+            "You MISSED it! Are you sleeping?! 醒醒！",
+            "WAKE UP! That was easy! 簡單的都接不到！",
+            "How could you miss THAT?! 怎麼可能！",
+            "My profits! Falling to the ground! 我的錢！",
+            "Unbelievable! You let it drop! 不可思議！",
+            "That was RIGHT THERE! Useless! 沒用！",
+            "Are you BLIND?! 瞎了嗎！",
+            "Stop daydreaming and FOCUS! 專心！"
+        ],
+        randomHarass: [
+            "You call that catching? Pathetic!",
+            "My grandmother moves faster than you!",
+            "Are you even TRYING?! 認真點！",
+            "This is embarrassing to watch!",
+            "Focus! FOCUS! 專心！",
+            "I've seen children do better!",
+            "What a disaster! 糟糕透了！",
+            "You're making me look bad!",
+            "Speed up! You're too slow! 太慢了！",
+            "Aiyah! So clumsy! 笨手笨腳！"
         ]
     };
 
@@ -458,10 +486,49 @@ window.addEventListener('load', function(){
     // Show welcome message on load
     setTimeout(() => showAyieeDialogue('welcome', 5000), 500);
 
+    // Random harassment timer - Ayiee will randomly harass the player
+    setInterval(() => {
+        if(!gameOver && !paused && Math.random() < 0.3) { // 30% chance every interval
+            showAyieeDialogue('randomHarass', 3500);
+        }
+    }, 15000); // Every 15 seconds, check if she should harass
+
     const gameOverModal = document.getElementById('gameOverModal');
     const finalScoreEl = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
     if(restartBtn) restartBtn.addEventListener('click', () => window.location.reload());
+
+    // Pause button functionality
+    const pauseBtn = document.getElementById('pauseBtn');
+    if(pauseBtn) {
+        pauseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if(!gameOver) {
+                if(paused) {
+                    resumeGame(true);
+                } else {
+                    pauseGame(true);
+                }
+            }
+        });
+    }
+
+    // Leaderboard toggle functionality
+    const leaderboardToggleBtn = document.getElementById('leaderboardToggleBtn');
+    const leaderboardPanel = document.getElementById('leaderboardPanel');
+    let leaderboardVisible = false;
+    
+    if(leaderboardToggleBtn && leaderboardPanel) {
+        leaderboardToggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            leaderboardVisible = !leaderboardVisible;
+            if(leaderboardVisible) {
+                leaderboardPanel.classList.add('visible');
+            } else {
+                leaderboardPanel.classList.remove('visible');
+            }
+        });
+    }
 
     // Load sprites immediately
     loadSprites();
@@ -497,9 +564,12 @@ window.addEventListener('load', function(){
     let gameOver = false;
     let paused = false;
     let bombFlashing = false; // flag to indicate bomb flash is active
-    let trashOverlay = false; // flag to render grey overlay when collecting trash
+    let trashOverlays = []; // array to track active trash overlays with timestamps
     let isImmune = false; // flag to indicate immunity period after bomb hit
     let immunityEndTime = 0; // timestamp when immunity ends
+    
+    // Floating score animations
+    let floatingScores = []; // array of {x, y, text, color, alpha, age}
     
     // Heart system: track which hearts are broken (true = broken, false = healthy)
     let hearts = [false, false, false]; // 3 hearts, all start healthy
@@ -508,6 +578,20 @@ window.addEventListener('load', function(){
     let consecutiveGoodCatches = 0;
     let lastScore = 0;
     let lastLevel = 1;
+
+    // Function to create floating score animation
+    function createFloatingScore(points, x, y) {
+        const isPositive = points > 0;
+        floatingScores.push({
+            x: x,
+            y: y,
+            text: (isPositive ? '+' : '') + points,
+            color: isPositive ? '#00ff00' : '#ff0000', // green for positive, red for negative
+            alpha: 1.0,
+            age: 0,
+            velocityY: -2 // float upward
+        });
+    }
 
     // Basket (original placeholder dimensions)
     const basket = {
@@ -766,6 +850,7 @@ window.addEventListener('load', function(){
                 if(it.type === 'good'){
                     score += 5;
                     animateScoreAdd();
+                    createFloatingScore(5, basket.x + basket.width / 2, basket.y - 10);
                     
                     // Dialogue triggers for good catches
                     consecutiveGoodCatches++;
@@ -786,11 +871,10 @@ window.addEventListener('load', function(){
                     // show a grey overlay briefly when player collects trash
                     triggerTrashOverlay();
                     animateScorePop();
+                    createFloatingScore(-8, basket.x + basket.width / 2, basket.y - 10);
                     
-                    // Dialogue for trash catch
-                    if(Math.random() < 0.4){
-                        showAyieeDialogue('trashCatch');
-                    }
+                    // Dialogue for trash catch - ALWAYS COMMENT
+                    showAyieeDialogue('trashCatch');
                 } else if(it.type === 'bomb'){
                     // Only apply bomb damage if not immune
                     if(!isImmune){
@@ -807,10 +891,8 @@ window.addEventListener('load', function(){
                         triggerBombFlash();
                         animateScorePop();
                         
-                        // Dialogue for bomb hit
-                        if(Math.random() < 0.5){
-                            showAyieeDialogue('bombHit');
-                        }
+                        // Dialogue for bomb hit - ALWAYS COMMENT
+                        showAyieeDialogue('bombHit');
                         
                         // Grant immunity for 2 seconds (2000ms)
                         isImmune = true;
@@ -836,6 +918,7 @@ window.addEventListener('load', function(){
                         }
                     } catch (e) {}
                     score += 10; // bonus points for catching health
+                    createFloatingScore(10, basket.x + basket.width / 2, basket.y - 10);
                     
                     // Dialogue for health pickup
                     if(Math.random() < 0.6){
@@ -861,18 +944,27 @@ window.addEventListener('load', function(){
                         }
                     }
                     score = Math.max(0, score - 20);
+                    createFloatingScore(-20, basket.x + basket.width / 2, basket.y - 10);
                     
-                    // Check if low on health
-                    const brokenHearts = hearts.filter(h => h).length;
-                    if(brokenHearts >= 2 && Math.random() < 0.5){
-                        showAyieeDialogue('lowHealth');
-                    } else if(Math.random() < 0.3){
-                        showAyieeDialogue('encouragement');
-                    }
+                    // Ayiee comments on EVERY missed item
+                    showAyieeDialogue('missedItem');
                     
                     if(bombsCaught >= maxBombs) endGame();
                 }
                 items.splice(i,1);
+            }
+        }
+
+        // Update floating score animations
+        for(let i = floatingScores.length - 1; i >= 0; i--){
+            const fs = floatingScores[i];
+            fs.y += fs.velocityY; // move upward
+            fs.age += 1;
+            fs.alpha = Math.max(0, 1.0 - (fs.age / 60)); // fade out over 60 frames (~1 second)
+            
+            // Remove when fully faded
+            if(fs.alpha <= 0) {
+                floatingScores.splice(i, 1);
             }
         }
     }
@@ -1007,9 +1099,10 @@ window.addEventListener('load', function(){
             ctx.restore();
         }
 
-        // If trash overlay active, draw semi-opaque grey layer (30% opacity)
-        if(trashOverlay){
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // If trash overlays active, draw grey layer (25% opacity per trash caught)
+        if(trashOverlays.length > 0){
+            const opacity = Math.min(trashOverlays.length * 0.25, 1.0); // 25% per trash, max 100%
+            ctx.fillStyle = `rgba(0,0,0,${opacity})`;
             ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
         }
         
@@ -1044,6 +1137,25 @@ window.addEventListener('load', function(){
                 }
             }
         }
+
+        // Draw floating score animations
+        ctx.save();
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        for(const fs of floatingScores){
+            ctx.globalAlpha = fs.alpha;
+            ctx.fillStyle = fs.color;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            
+            // Outline for visibility
+            ctx.strokeText(fs.text, fs.x, fs.y);
+            ctx.fillText(fs.text, fs.x, fs.y);
+        }
+        
+        ctx.restore();
     }
 
     // Flash canvas white when bomb is hit
@@ -1064,10 +1176,14 @@ window.addEventListener('load', function(){
         }, 1000);
     }
 
-    // Show a brief grey overlay when collecting trash
+    // Show a brief grey overlay when collecting trash (stackable)
     function triggerTrashOverlay(){
-        trashOverlay = true;
-        setTimeout(() => { trashOverlay = false; }, 3000);
+        const overlayId = Date.now() + Math.random();
+        trashOverlays.push(overlayId);
+        setTimeout(() => {
+            const index = trashOverlays.indexOf(overlayId);
+            if(index > -1) trashOverlays.splice(index, 1);
+        }, 3000);
     }
 
     // Update UI overlay (stats and game-over)
