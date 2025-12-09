@@ -649,13 +649,16 @@ html, body {
 @media (max-width: 768px) and (orientation: portrait) {
     html, body {
         background-attachment: scroll; /* Better performance on mobile */
-        overflow-y: auto;
+        overflow: hidden;
+        height: 100vh;
+        height: 100dvh;
     }
     
     .game-container {
-        min-height: 100vh;
-        min-height: 100dvh;
+        height: 100vh;
+        height: 100dvh;
         padding: 0;
+        overflow: hidden;
     }
     
     .game-viewport {
@@ -664,6 +667,7 @@ html, body {
         height: 100dvh;
         padding: 0;
         margin: 0;
+        overflow: hidden;
     }
     
     #gameCanvas {
