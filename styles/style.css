@@ -14,6 +14,113 @@ html, body {
     background-attachment: fixed;
 }
 
+.game-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Paper Mario-style Score Display */
+.score-display {
+    position: absolute;
+    top: 20px;
+    left: calc(50% - 240px - 170px);
+    z-index: 100;
+    background: 
+        linear-gradient(145deg, #fffbf0 0%, #fff9e6 50%, #fffbf0 100%);
+    border: 5px solid #3d2817;
+    border-radius: 20px;
+    padding: 14px 32px;
+    box-shadow: 
+        0 0 0 2px #8b6f47,
+        0 10px 0 #2d1f12,
+        0 10px 20px rgba(0,0,0,0.4),
+        inset 0 3px 0 rgba(255,255,255,0.7),
+        inset 0 -2px 8px rgba(61,40,23,0.15);
+    min-width: 160px;
+    text-align: center;
+    transition: all 0.1s ease-out;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.score-display::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 8px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.6), transparent);
+    border-radius: 50%;
+    filter: blur(2px);
+}
+
+.score-display.score-add {
+    animation: scoreAdd 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.score-display.score-pop {
+    animation: scorePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes scoreAdd {
+    0% { 
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)) brightness(1);
+    }
+    40% { 
+        transform: translateY(-12px) scale(1.08);
+        filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.15);
+    }
+    100% { 
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)) brightness(1);
+    }
+}
+
+@keyframes scorePop {
+    0%, 100% { 
+        transform: scale(1) rotate(0deg);
+    }
+    25% { 
+        transform: scale(1.12) rotate(-3deg);
+    }
+    75% { 
+        transform: scale(1.12) rotate(3deg);
+    }
+}
+
+.score-label {
+    font-family: 'Arial Black', 'Arial Bold', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: #ff6b35;
+    text-shadow: 
+        2px 2px 0 #fff,
+        -1px -1px 0 #c43d15,
+        1px 1px 0 #c43d15,
+        3px 3px 4px rgba(0,0,0,0.2);
+    letter-spacing: 1.5px;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.score-value {
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 34px;
+    font-weight: bold;
+    color: #2d1f12;
+    text-shadow: 
+        3px 3px 0 rgba(255,255,255,0.9),
+        2px 2px 3px rgba(0,0,0,0.15),
+        -1px -1px 0 rgba(139,111,71,0.3);
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
 .game-viewport {
     position: relative;
     /* center the viewport, keep it wide but constrained for large screens */
@@ -23,7 +130,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Canvas: gameplay only */
@@ -63,11 +170,166 @@ html, body {
 #pauseModal .game-over-content { width:340px; }
 #pauseModal .restart-btn { padding:10px 16px; }
 
-/* Leaderboard sidebar */
-.side-panel { display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); width:260px; background:rgba(255,255,255,0.96); border-radius:12px; padding:18px; box-shadow:0 18px 48px rgba(0,0,0,0.18); z-index:20; }
-.side-panel h2 { font-size:16px; margin-bottom:10px; }
-#leaderboardList { list-style:none; max-height:70vh; overflow:auto; }
-#leaderboardList li { font-family:'Courier New', Courier, monospace; font-size:12px; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+/* Leaderboard sidebar - TETR.IO style */
+.side-panel { 
+    display:none; 
+    position:absolute; 
+    left: calc(50% + 240px + 20px); 
+    top: 20px; 
+    width: 320px;
+    height: auto;
+    min-height: fit-content;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 
+        0 8px 32px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    z-index: 100;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.side-panel h2 { 
+    font-family: 'Arial Black', 'Arial Bold', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    text-align: left;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+#leaderboardList { 
+    list-style: none; 
+    height: auto;
+    overflow: visible;
+    padding: 12px;
+    padding-bottom: 12px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#leaderboardList li { 
+    font-family: 'Courier New', Courier, monospace; 
+    font-size: 13px; 
+    padding: 10px 12px;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #e8e8e8;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#leaderboardList li:hover {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border-color: rgba(255,255,255,0.2);
+    transform: translateX(4px);
+}
+
+#leaderboardList li::before {
+    content: attr(data-rank);
+    font-weight: 900;
+    font-size: 13px;
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    margin-right: 12px;
+    color: rgba(255,255,255,0.6);
+    flex-shrink: 0;
+}
+
+/* Top 3 rank badges - TETR.IO style */
+#leaderboardList li:nth-child(1)::before {
+    content: '1';
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #1a1a2e;
+    box-shadow: 
+        0 0 20px rgba(255, 215, 0, 0.6),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+    font-size: 15px;
+    border: 2px solid #fff3b0;
+}
+
+#leaderboardList li:nth-child(2)::before {
+    content: '2';
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+    color: #1a1a2e;
+    box-shadow: 
+        0 0 16px rgba(192, 192, 192, 0.5),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+    font-size: 15px;
+    border: 2px solid #f0f0f0;
+}
+
+#leaderboardList li:nth-child(3)::before {
+    content: '3';
+    background: linear-gradient(135deg, #cd7f32, #ff9a56);
+    color: #1a1a2e;
+    box-shadow: 
+        0 0 16px rgba(205, 127, 50, 0.5),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+    font-size: 15px;
+    border: 2px solid #ffb380;
+}
+
+/* Special styling for top 3 entries */
+#leaderboardList li:nth-child(1) {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+#leaderboardList li:nth-child(2) {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+    border-color: rgba(192, 192, 192, 0.3);
+}
+
+#leaderboardList li:nth-child(3) {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+    border-color: rgba(205, 127, 50, 0.3);
+}
+
+/* Player info layout */
+#leaderboardList li .player-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+#leaderboardList li .player-name {
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+#leaderboardList li .player-score {
+    font-weight: 900;
+    color: #4ecca3;
+    text-shadow: 0 0 10px rgba(78, 204, 163, 0.5);
+    margin-left: auto;
+}
 
 /* Highscore popup (fallback) */
 .highscore-popup { background:#fff; border-radius:12px; padding:24px; box-shadow:0 18px 48px rgba(0,0,0,0.35); z-index:10001; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:320px; text-align:center; }

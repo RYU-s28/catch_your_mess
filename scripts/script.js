@@ -78,7 +78,23 @@ window.addEventListener('load', function(){
         listEl.innerHTML = '';
         leaderboard.slice(0, LEADERBOARD_SIZE).forEach((entry, idx) => {
             const li = document.createElement('li');
-            li.textContent = `${(idx+1).toString().padStart(2,'0')}. ${entry.name.padEnd(3, ' ')} - ${entry.score} (${entry.date})`;
+            li.setAttribute('data-rank', idx + 1);
+            
+            const playerInfo = document.createElement('div');
+            playerInfo.className = 'player-info';
+            
+            const playerName = document.createElement('span');
+            playerName.className = 'player-name';
+            playerName.textContent = entry.name;
+            
+            const playerScore = document.createElement('span');
+            playerScore.className = 'player-score';
+            playerScore.textContent = entry.score.toLocaleString();
+            
+            playerInfo.appendChild(playerName);
+            li.appendChild(playerInfo);
+            li.appendChild(playerScore);
+            
             listEl.appendChild(li);
         });
     }
@@ -203,16 +219,57 @@ window.addEventListener('load', function(){
     // Logical resolution used for drawing (game coordinates)
     const LOGICAL_WIDTH = 480;
     const LOGICAL_HEIGHT = 800;
-    const dpr = window.devicePixelRatio || 1;
+    const ASPECT_RATIO = LOGICAL_WIDTH / LOGICAL_HEIGHT;
 
-    // Set canvas physical resolution and scale context
-    canvas.width = LOGICAL_WIDTH * dpr;
-    canvas.height = LOGICAL_HEIGHT * dpr;
-    // Keep CSS size for display (the CSS file sets width/height)
-    canvas.style.width = LOGICAL_WIDTH + 'px';
-    canvas.style.height = LOGICAL_HEIGHT + 'px';
+    // Function to resize canvas responsively
+    function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Get the actual displayed size of the canvas
+        const rect = canvas.getBoundingClientRect();
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
+        
+        // Calculate the best fit while maintaining aspect ratio
+        let canvasWidth, canvasHeight;
+        const viewportAspect = displayWidth / displayHeight;
+        
+        if (viewportAspect > ASPECT_RATIO) {
+            // Viewport is wider - fit to height
+            canvasHeight = displayHeight;
+            canvasWidth = displayHeight * ASPECT_RATIO;
+        } else {
+            // Viewport is taller - fit to width
+            canvasWidth = displayWidth;
+            canvasHeight = displayWidth / ASPECT_RATIO;
+        }
+        
+        // Set canvas CSS size
+        canvas.style.width = canvasWidth + 'px';
+        canvas.style.height = canvasHeight + 'px';
+        
+        // Set canvas physical resolution (for crisp rendering)
+        canvas.width = LOGICAL_WIDTH * dpr;
+        canvas.height = LOGICAL_HEIGHT * dpr;
+        
+        // Scale the context to match DPR
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Initial canvas setup
+    resizeCanvas();
+    
+    // Resize canvas when window size changes
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resizeCanvas, 100);
+    });
+    
+    // Also handle orientation changes on mobile
+    window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 100);
+    });
 
     // Sprite image assets
     const sprites = {
@@ -267,10 +324,30 @@ window.addEventListener('load', function(){
     }
 
     // UI DOM elements (we update these instead of drawing HUD on canvas)
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const scoreValue = document.getElementById('scoreValue');
     const uiScore = document.getElementById('uiScore');
     const uiLevel = document.getElementById('uiLevel');
     const uiBombs = document.getElementById('uiBombs');
     const uiSpeed = document.getElementById('uiSpeed');
+    
+    // Score add animation (for earning points)
+    function animateScoreAdd() {
+        if(scoreDisplay) {
+            scoreDisplay.classList.remove('score-add');
+            void scoreDisplay.offsetWidth; // trigger reflow
+            scoreDisplay.classList.add('score-add');
+        }
+    }
+    
+    // Score pop animation (for bomb/trash damage)
+    function animateScorePop() {
+        if(scoreDisplay) {
+            scoreDisplay.classList.remove('score-pop');
+            void scoreDisplay.offsetWidth; // trigger reflow
+            scoreDisplay.classList.add('score-pop');
+        }
+    }
     const gameOverModal = document.getElementById('gameOverModal');
     const finalScoreEl = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
@@ -567,10 +644,12 @@ window.addEventListener('load', function(){
                 // apply effects
                 if(it.type === 'good'){
                     score += 5;
+                    animateScoreAdd();
                 } else if(it.type === 'bad'){
                     score = Math.max(0, score - 8);
                     // show a grey overlay briefly when player collects trash
                     triggerTrashOverlay();
+                    animateScorePop();
                 } else if(it.type === 'bomb'){
                     // Only apply bomb damage if not immune
                     if(!isImmune){
@@ -584,6 +663,7 @@ window.addEventListener('load', function(){
                         }
                         // Flash canvas white for 1ms instead of minus points
                         triggerBombFlash();
+                        animateScorePop();
                         // Grant immunity for 2 seconds (2000ms)
                         isImmune = true;
                         immunityEndTime = Date.now() + 2000;
@@ -829,6 +909,9 @@ window.addEventListener('load', function(){
 
     // Update UI overlay (stats and game-over)
     function updateUI(){
+        if(scoreValue) {
+            scoreValue.textContent = score;
+        }
         if(uiScore) uiScore.textContent = score;
         if(uiLevel) uiLevel.textContent = level;
         if(uiBombs) uiBombs.textContent = bombsCaught + '/' + maxBombs;
