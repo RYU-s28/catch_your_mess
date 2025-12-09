@@ -348,6 +348,116 @@ window.addEventListener('load', function(){
             scoreDisplay.classList.add('score-pop');
         }
     }
+
+    // Ayiee Character Dialogue System
+    const ayieePopup = document.getElementById('ayieePopup');
+    const dialogueText = document.getElementById('dialogueText');
+    let currentDialogueTimeout = null;
+    let lastDialogueTime = 0;
+    const dialogueCooldown = 8000; // 8 seconds between dialogues
+
+    // Dialogue library
+    const dialogues = {
+        welcome: [
+            "Ayie! You made this mess! Now catch it all!",
+            "Welcome to my night market! Clean up your chaos!",
+            "Use arrow keys or touch to move the basket!"
+        ],
+        goodCatch: [
+            "Hao! Good catch! 好！",
+            "That's the spirit! Keep going!",
+            "Nicely done! 厲害！",
+            "You're getting better at this!",
+            "Excellent! 太棒了！"
+        ],
+        multipleCatch: [
+            "Wow! You're on fire! 🔥",
+            "Amazing streak! 連續得分！",
+            "Can't stop won't stop!",
+            "Look at you go! 真厲害！"
+        ],
+        bombHit: [
+            "Aiyah! Watch out for bombs! 小心！",
+            "That's dangerous! Be careful!",
+            "Bombs are bad! Avoid them! 避開！",
+            "Ouch! That must hurt!"
+        ],
+        trashCatch: [
+            "Eww! That's trash! 髒東西！",
+            "No no! Don't catch the bad stuff!",
+            "That's buhao dongxi! 壞東西！",
+            "Ayie! Wrong thing!"
+        ],
+        levelUp: [
+            "It's getting faster! 加油！",
+            "Next level! Can you keep up?",
+            "Things are speeding up! 小心！",
+            "Higher difficulty! Good luck!"
+        ],
+        lowHealth: [
+            "Careful! You're running out of hearts! 危險！",
+            "Watch your health! 注意生命值！",
+            "Not many hearts left! Be careful!"
+        ],
+        healthPickup: [
+            "Health restored! 恢復了！",
+            "Good as new! 好了！",
+            "Feeling better? 好多了！"
+        ],
+        highScore: [
+            "Wah! Such high score! 好厲害！",
+            "You're doing amazing! 太棒了！",
+            "Breaking records here!",
+            "Impressive skills! 真厲害！"
+        ],
+        encouragement: [
+            "Don't give up! 加油！",
+            "You can do it! 繼續努力！",
+            "Keep trying! Almost there!",
+            "Come on! 加油加油！"
+        ]
+    };
+
+    function showAyieeDialogue(category, duration = 4000) {
+        const now = Date.now();
+        
+        // Don't show if on cooldown
+        if (now - lastDialogueTime < dialogueCooldown) return;
+        
+        const messages = dialogues[category];
+        if (!messages || messages.length === 0) return;
+        
+        // Pick random message from category
+        const message = messages[Math.floor(Math.random() * messages.length)];
+        
+        // Update dialogue text
+        if (dialogueText) {
+            dialogueText.textContent = message;
+        }
+        
+        // Show popup
+        if (ayieePopup) {
+            ayieePopup.classList.add('show');
+        }
+        
+        lastDialogueTime = now;
+        
+        // Clear existing timeout
+        if (currentDialogueTimeout) {
+            clearTimeout(currentDialogueTimeout);
+        }
+        
+        // Hide after duration
+        currentDialogueTimeout = setTimeout(() => {
+            if (ayieePopup) {
+                ayieePopup.classList.remove('show');
+            }
+        }, duration);
+    }
+
+    // Show welcome message on load
+    setTimeout(() => showAyieeDialogue('welcome', 5000), 500);
+
     const gameOverModal = document.getElementById('gameOverModal');
     const finalScoreEl = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
@@ -393,6 +503,11 @@ window.addEventListener('load', function(){
     
     // Heart system: track which hearts are broken (true = broken, false = healthy)
     let hearts = [false, false, false]; // 3 hearts, all start healthy
+
+    // Dialogue tracking variables
+    let consecutiveGoodCatches = 0;
+    let lastScore = 0;
+    let lastLevel = 1;
 
     // Basket (original placeholder dimensions)
     const basket = {
@@ -570,6 +685,12 @@ window.addEventListener('load', function(){
             spawnInterval = Math.max(250, Math.floor(spawnInterval * 0.90));
             // restart spawn interval with new speed
             startSpawning();
+            
+            // Dialogue for level up
+            if(level > lastLevel && Math.random() < 0.7){
+                showAyieeDialogue('levelUp');
+                lastLevel = level;
+            }
         }
     }, 1000);
 
@@ -645,15 +766,36 @@ window.addEventListener('load', function(){
                 if(it.type === 'good'){
                     score += 5;
                     animateScoreAdd();
+                    
+                    // Dialogue triggers for good catches
+                    consecutiveGoodCatches++;
+                    if(consecutiveGoodCatches >= 5 && Math.random() < 0.4){
+                        showAyieeDialogue('multipleCatch');
+                    } else if(Math.random() < 0.15){
+                        showAyieeDialogue('goodCatch');
+                    }
+                    
+                    // High score comment
+                    if(score > 200 && score - lastScore >= 50 && Math.random() < 0.2){
+                        showAyieeDialogue('highScore');
+                        lastScore = score;
+                    }
                 } else if(it.type === 'bad'){
                     score = Math.max(0, score - 8);
+                    consecutiveGoodCatches = 0; // reset streak
                     // show a grey overlay briefly when player collects trash
                     triggerTrashOverlay();
                     animateScorePop();
+                    
+                    // Dialogue for trash catch
+                    if(Math.random() < 0.4){
+                        showAyieeDialogue('trashCatch');
+                    }
                 } else if(it.type === 'bomb'){
                     // Only apply bomb damage if not immune
                     if(!isImmune){
                         bombsCaught += 1;
+                        consecutiveGoodCatches = 0; // reset streak
                         // Mark the rightmost healthy heart as broken
                         for(let h = hearts.length - 1; h >= 0; h--){
                             if(!hearts[h]){
@@ -664,6 +806,12 @@ window.addEventListener('load', function(){
                         // Flash canvas white for 1ms instead of minus points
                         triggerBombFlash();
                         animateScorePop();
+                        
+                        // Dialogue for bomb hit
+                        if(Math.random() < 0.5){
+                            showAyieeDialogue('bombHit');
+                        }
+                        
                         // Grant immunity for 2 seconds (2000ms)
                         isImmune = true;
                         immunityEndTime = Date.now() + 2000;
@@ -688,6 +836,11 @@ window.addEventListener('load', function(){
                         }
                     } catch (e) {}
                     score += 10; // bonus points for catching health
+                    
+                    // Dialogue for health pickup
+                    if(Math.random() < 0.6){
+                        showAyieeDialogue('healthPickup');
+                    }
                 }
                 // remove
                 items.splice(i,1);
@@ -699,6 +852,7 @@ window.addEventListener('load', function(){
                 if(it.type === 'good'){
                     // treat missing a good item like hitting a bomb: increment bomb count and heavy penalty
                     bombsCaught += 1;
+                    consecutiveGoodCatches = 0; // reset streak
                     // Mark the rightmost healthy heart as broken
                     for(let h = hearts.length - 1; h >= 0; h--){
                         if(!hearts[h]){
@@ -707,6 +861,15 @@ window.addEventListener('load', function(){
                         }
                     }
                     score = Math.max(0, score - 20);
+                    
+                    // Check if low on health
+                    const brokenHearts = hearts.filter(h => h).length;
+                    if(brokenHearts >= 2 && Math.random() < 0.5){
+                        showAyieeDialogue('lowHealth');
+                    } else if(Math.random() < 0.3){
+                        showAyieeDialogue('encouragement');
+                    }
+                    
                     if(bombsCaught >= maxBombs) endGame();
                 }
                 items.splice(i,1);
