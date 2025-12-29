@@ -182,8 +182,8 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
-    border: 3px solid rgba(255,255,255,0.2);
+    background: linear-gradient(135deg, #2d1f12 0%, #3d2817 100%);
+    border: 3px solid #8b6f47;
     border-radius: 12px;
     padding: 10px 16px;
     color: #fff;
@@ -192,8 +192,8 @@ html, body {
     font-weight: 700;
     cursor: pointer;
     box-shadow: 
-        0 0 0 2px rgba(255,255,255,0.1),
-        0 6px 0 #0a1a2e,
+        0 0 0 2px #5a4a36,
+        0 6px 0 #1a1208,
         0 6px 16px rgba(0,0,0,0.4);
     transition: all 0.2s ease;
     letter-spacing: 0.5px;
@@ -202,16 +202,16 @@ html, body {
 .leaderboard-toggle-btn:hover {
     transform: translateY(-2px);
     box-shadow: 
-        0 0 0 2px rgba(255,255,255,0.1),
-        0 8px 0 #0a1a2e,
+        0 0 0 2px #5a4a36,
+        0 8px 0 #1a1208,
         0 8px 20px rgba(0,0,0,0.5);
 }
 
 .leaderboard-toggle-btn:active {
     transform: translateY(2px);
     box-shadow: 
-        0 0 0 2px rgba(255,255,255,0.1),
-        0 2px 0 #0a1a2e,
+        0 0 0 2px #5a4a36,
+        0 2px 0 #1a1208,
         0 2px 8px rgba(0,0,0,0.3);
 }
 
@@ -259,17 +259,27 @@ html, body {
 .stat-value { font-family: 'Courier New', Courier, monospace; font-size:18px; color:#111; font-weight:700; }
 
 /* Game over modal */
-.game-over-modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index:1000; }
+.game-over-modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index:1000; cursor: default; }
 .game-over-content { background:#fff; border-radius:14px; padding:32px; width:320px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,0.35); }
 .game-over-content h2 { font-size:42px; margin-bottom:12px; color:#111; }
 .final-score { color:#666; margin-bottom:18px; }
-.restart-btn { pointer-events:auto; background:linear-gradient(135deg,#4d79bc,#3d5fa8); border:none; color:#fff; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer; }
+.restart-btn { pointer-events:auto; background:linear-gradient(145deg, #fff9e6 0%, #fffbf0 100%); border: 4px solid #3d2817; color:#2d1f12; padding:12px 24px; border-radius:12px; font-weight:700; cursor:pointer; box-shadow: 0 6px 0 #2d1f12, 0 6px 12px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.5); transition: transform 0.1s ease, box-shadow 0.1s ease; text-shadow: 1px 1px 0 rgba(255,255,255,0.7); }
+
+.restart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 0 #2d1f12, 0 8px 16px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.5);
+}
+
+.restart-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #2d1f12, 0 2px 8px rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.5);
+}
 
 /* Pause modal uses same layout as game-over but smaller on wide screens */
 #pauseModal .game-over-content { width:340px; }
 #pauseModal .restart-btn { padding:10px 16px; }
 
-/* Leaderboard sidebar - TETR.IO style */
+/* Leaderboard sidebar - TETR.IO style with Paper Mario colors */
 .side-panel { 
     display: none; 
     position: fixed;
@@ -279,13 +289,14 @@ html, body {
     height: auto;
     max-height: calc(100vh - 100px);
     min-height: fit-content;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border: 2px solid rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, #2d1f12 0%, #3d2817 100%);
+    border: 5px solid #8b6f47;
     border-radius: 12px;
     padding: 0;
     box-shadow: 
-        0 8px 32px rgba(0,0,0,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.05);
+        0 0 0 2px #5a4a36,
+        0 10px 0 #1a1208,
+        0 10px 20px rgba(0,0,0,0.4);
     z-index: 200;
     overflow-y: auto;
     overflow-x: hidden;
@@ -308,8 +319,8 @@ html, body {
     letter-spacing: 2px;
     margin: 0;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
-    border-bottom: 2px solid rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, #1a1208 0%, #2d1f12 100%);
+    border-bottom: 3px solid #5a4a36;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     text-align: left;
@@ -333,13 +344,13 @@ html, body {
     font-size: 13px; 
     padding: 10px 12px;
     margin-bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(139, 111, 71, 0.2);
+    border: 2px solid rgba(139, 111, 71, 0.4);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    color: #e8e8e8;
+    color: #e8dcc8;
     font-weight: 600;
     transition: all 0.2s ease;
     position: relative;
@@ -347,8 +358,8 @@ html, body {
 }
 
 #leaderboardList li:hover {
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-    border-color: rgba(255,255,255,0.2);
+    background: rgba(139, 111, 71, 0.35);
+    border-color: rgba(139, 111, 71, 0.6);
     transform: translateX(4px);
 }
 
@@ -361,10 +372,11 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.1);
+    background: rgba(139, 111, 71, 0.4);
     border-radius: 6px;
     margin-right: 12px;
-    color: rgba(255,255,255,0.6);
+    color: #e8dcc8;
+    border: 2px solid rgba(139, 111, 71, 0.6);
     flex-shrink: 0;
 }
 
@@ -429,13 +441,13 @@ html, body {
 #leaderboardList li .player-name {
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
 #leaderboardList li .player-score {
     font-weight: 900;
-    color: #4ecca3;
-    text-shadow: 0 0 10px rgba(78, 204, 163, 0.5);
+    color: #ffed4e;
+    text-shadow: 0 0 10px rgba(255, 237, 78, 0.5);
     margin-left: auto;
 }
 
@@ -464,8 +476,8 @@ html, body {
 }
 
 .ayiee-character {
-    width: 120px;
-    height: 120px;
+    width: 144px;
+    height: 144px;
     position: relative;
     animation: ayieeBounce 2s ease-in-out infinite;
 }
@@ -618,8 +630,8 @@ html, body {
     }
     
     .ayiee-character {
-        width: 80px;
-        height: 80px;
+        width: 96px;
+        height: 96px;
     }
     
     .ayiee-dialogue {
@@ -715,8 +727,8 @@ html, body {
     }
     
     .ayiee-character {
-        width: 70px;
-        height: 70px;
+        width: 84px;
+        height: 84px;
     }
     
     .ayiee-dialogue {
@@ -728,4 +740,16 @@ html, body {
     .dialogue-text {
         font-size: 11px;
     }
+}
+
+/* Footer styles */
+footer {
+  text-align: center;
+  padding: 3px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 1000;
 }

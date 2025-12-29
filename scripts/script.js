@@ -186,15 +186,8 @@ window.addEventListener('load', function(){
 
         const submitBtn = document.createElement('button');
         submitBtn.textContent = 'SUBMIT';
+        submitBtn.className = 'restart-btn';
         submitBtn.style.marginTop = '12px';
-        submitBtn.style.padding = '10px 24px';
-        submitBtn.style.fontSize = '14px';
-        submitBtn.style.fontWeight = '600';
-        submitBtn.style.background = 'linear-gradient(135deg,#4d79bc,#3d5fa8)';
-        submitBtn.style.color = '#fff';
-        submitBtn.style.border = 'none';
-        submitBtn.style.borderRadius = '6px';
-        submitBtn.style.cursor = 'pointer';
         popup.appendChild(submitBtn);
 
         submitBtn.onclick = () => {
@@ -359,7 +352,7 @@ window.addEventListener('load', function(){
     // Dialogue library
     const dialogues = {
         welcome: [
-            "Ayie! You made this mess! Now catch it all!",
+            "Ayaaa! You made this mess! Now catch it all!",
             "You think this is a game? Clean up NOW!",
             "Listen up! Don't embarrass me in front of customers!"
         ],
