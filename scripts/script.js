@@ -1,5 +1,5 @@
 window.addEventListener('load', function(){
-    // --- Highscore Leaderboard Logic ---
+    // --- Highscore Leaderboard Logic (Initialize early for menu) ---
     const LEADERBOARD_SIZE = 10;
     const LEADERBOARD_FILE = 'data/highscores.json';
     let leaderboard = [];
@@ -36,6 +36,7 @@ window.addEventListener('load', function(){
                     return { name: String(data.name || '---').slice(0,8), score: Number(data.score || 0), date: dateStr };
                 });
                 updateLeaderboardPanel();
+                updateMenuLeaderboard();
                 return;
             } catch (e) {
                 console.warn('Firestore load failed, falling back', e);
@@ -49,6 +50,7 @@ window.addEventListener('load', function(){
                 const data = await res.json();
                 leaderboard = Array.isArray(data) ? data : [];
                 updateLeaderboardPanel();
+                updateMenuLeaderboard();
                 return;
             }
         } catch (e) {
@@ -64,6 +66,7 @@ window.addEventListener('load', function(){
             leaderboard = [];
         }
         updateLeaderboardPanel();
+        updateMenuLeaderboard();
     }
 
     // Helper: save leaderboard to localStorage (fallback only)
@@ -98,6 +101,121 @@ window.addEventListener('load', function(){
             listEl.appendChild(li);
         });
     }
+    
+    // Helper: update menu leaderboard
+    function updateMenuLeaderboard() {
+        const menuLeaderboardList = document.getElementById('menuLeaderboardList');
+        if (!menuLeaderboardList) return;
+        menuLeaderboardList.innerHTML = '';
+        
+        if (leaderboard.length === 0) {
+            const emptyMsg = document.createElement('li');
+            emptyMsg.className = 'empty-leaderboard';
+            emptyMsg.textContent = 'No scores yet. Be the first!';
+            menuLeaderboardList.appendChild(emptyMsg);
+            return;
+        }
+        
+        leaderboard.slice(0, LEADERBOARD_SIZE).forEach((entry, idx) => {
+            const li = document.createElement('li');
+            li.setAttribute('data-rank', idx + 1);
+            
+            const playerInfo = document.createElement('div');
+            playerInfo.className = 'player-info';
+            
+            const playerName = document.createElement('span');
+            playerName.className = 'player-name';
+            playerName.textContent = entry.name;
+            
+            const playerScore = document.createElement('span');
+            playerScore.className = 'player-score';
+            playerScore.textContent = entry.score.toLocaleString();
+            
+            playerInfo.appendChild(playerName);
+            li.appendChild(playerInfo);
+            li.appendChild(playerScore);
+            
+            menuLeaderboardList.appendChild(li);
+        });
+    }
+
+    // Load leaderboard on page load
+    loadLeaderboard();
+
+    // --- Home Menu Logic ---
+    const homeMenu = document.getElementById('homeMenu');
+    const gameContainer = document.getElementById('gameContainer');
+    const menuPlayBtn = document.getElementById('menuPlayBtn');
+    const menuHowToPlayBtn = document.getElementById('menuHowToPlayBtn');
+    const menuLeaderboardBtn = document.getElementById('menuLeaderboardBtn');
+    const instructionsModal = document.getElementById('instructionsModal');
+    const closeInstructions = document.getElementById('closeInstructions');
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    const closeLeaderboard = document.getElementById('closeLeaderboard');
+    
+    let gameInitialized = false;
+    
+    // Function to start the game
+    function startGame() {
+        homeMenu.classList.add('fade-out');
+        setTimeout(() => {
+            homeMenu.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            
+            if (!gameInitialized) {
+                gameInitialized = true;
+                initializeGame();
+            }
+        }, 500);
+    }
+    
+    // Menu button handlers
+    if (menuPlayBtn) {
+        menuPlayBtn.addEventListener('click', startGame);
+    }
+    
+    if (menuHowToPlayBtn) {
+        menuHowToPlayBtn.addEventListener('click', () => {
+            instructionsModal.style.display = 'flex';
+        });
+    }
+    
+    if (menuLeaderboardBtn) {
+        menuLeaderboardBtn.addEventListener('click', () => {
+            leaderboardModal.style.display = 'flex';
+            updateMenuLeaderboard();
+        });
+    }
+    
+    if (closeInstructions) {
+        closeInstructions.addEventListener('click', () => {
+            instructionsModal.style.display = 'none';
+        });
+    }
+    
+    if (closeLeaderboard) {
+        closeLeaderboard.addEventListener('click', () => {
+            leaderboardModal.style.display = 'none';
+        });
+    }
+    
+    // Close instructions on click outside
+    instructionsModal.addEventListener('click', (e) => {
+        if (e.target === instructionsModal) {
+            instructionsModal.style.display = 'none';
+        }
+    });
+    
+    // Close leaderboard on click outside
+    leaderboardModal.addEventListener('click', (e) => {
+        if (e.target === leaderboardModal) {
+            leaderboardModal.style.display = 'none';
+        }
+    });
+    
+    // Function to initialize game (moved from bottom)
+    function initializeGame() {
+    // Game now uses the leaderboard functions defined at the top level
 
     // Helper: check if score is a new highscore
     function isHighscore(score) {
@@ -137,6 +255,7 @@ window.addEventListener('load', function(){
                 const data = await res.json();
                 leaderboard = Array.isArray(data) ? data : leaderboard;
                 updateLeaderboardPanel();
+                updateMenuLeaderboard();
                 saveLeaderboard();
                 return;
             }
@@ -152,6 +271,7 @@ window.addEventListener('load', function(){
         leaderboard = leaderboard.slice(0, LEADERBOARD_SIZE);
         saveLeaderboard();
         updateLeaderboardPanel();
+        updateMenuLeaderboard();
     }
 
     // Helper: show name entry popup
@@ -200,10 +320,6 @@ window.addEventListener('load', function(){
         document.body.appendChild(popup);
         input.focus();
     }
-
-    // Load leaderboard on start
-    loadLeaderboard();
-    updateLeaderboardPanel();
 
     // canvas setup with devicePixelRatio scaling for crisp rendering
     const canvas = document.getElementById('gameCanvas');
@@ -1014,7 +1130,13 @@ window.addEventListener('load', function(){
     const resetBtn = document.getElementById('resetBtn');
     const quitBtn = document.getElementById('quitBtn');
     if(continueBtn) continueBtn.addEventListener('click', resumeGame);
-    if(resetBtn) resetBtn.addEventListener('click', () => window.location.reload());
+    if(resetBtn) resetBtn.addEventListener('click', () => { 
+        // Close pause modal and reload to restart game in play mode
+        const pm = document.getElementById('pauseModal');
+        if(pm) pm.style.display = 'none';
+        paused = false;
+        window.location.reload();
+    });
     if(quitBtn) quitBtn.addEventListener('click', () => { window.location.href = '/'; });
 
     // Auto pause when tab/window is not active. Respect user's manual pause.
@@ -1211,7 +1333,7 @@ window.addEventListener('load', function(){
         if(!gameOver) requestAnimationFrame(loop);
     }
 
-    // initialize and start
+    // initialize and start game
     // Set game start time for 7.5 second intro phase
     gameStartTime = Date.now();
     
@@ -1232,4 +1354,5 @@ window.addEventListener('load', function(){
     
     startSpawning();
     loop();
+    } // End of initializeGame function
 });

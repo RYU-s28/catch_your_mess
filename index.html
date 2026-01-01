@@ -9,7 +9,99 @@
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-  <div class="game-container">
+  <!-- Home Menu Screen -->
+  <div class="home-menu" id="homeMenu">
+    <div class="home-content">
+      <div class="game-logo">
+        <img src="assets/images/good_drops/coin.png" alt="Coin" class="logo-coin">
+        <h1 class="logo-title">CATCH YOUR MESS!</h1>
+        <p class="logo-subtitle">亂丟樂</p>
+      </div>
+      
+      <div class="menu-buttons">
+        <button class="menu-btn play-btn" id="menuPlayBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M8 5v14l11-7z" fill="currentColor"/>
+          </svg>
+          PLAY
+        </button>
+        <button class="menu-btn" id="menuHowToPlayBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          HOW TO PLAY
+        </button>
+        <button class="menu-btn" id="menuLeaderboardBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          LEADERBOARD
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions Modal -->
+  <div class="instructions-modal" id="instructionsModal" style="display:none;">
+    <div class="instructions-content">
+      <button class="close-btn" id="closeInstructions">×</button>
+      <h2>How to Play</h2>
+      <div class="instructions-grid">
+        <div class="instruction-item">
+          <img src="assets/images/good_drops/coin.png" alt="Good Item" class="instruction-icon">
+          <h3>Catch Good Items</h3>
+          <p>Earn points!</p>
+        </div>
+        <div class="instruction-item">
+          <img src="assets/images/bad_drops/rubish.png" alt="Trash" class="instruction-icon">
+          <h3>Avoid Trash</h3>
+          <p>Lose points!</p>
+        </div>
+        <div class="instruction-item">
+          <img src="assets/images/bad_drops/dynamite.png" alt="Bomb" class="instruction-icon">
+          <h3>Watch Bombs</h3>
+          <p>Lose a Life!</p>
+        </div>
+        <div class="instruction-item">
+          <img src="assets/images/health.png" alt="Health" class="instruction-icon">
+          <h3>Collect Hearts</h3>
+          <p>Restore health!</p>
+        </div>
+      </div>
+      <div class="controls-section">
+        <h3>Controls</h3>
+        <div class="controls-list">
+          <div class="control-item">
+            <span class="key-indicator">← →</span>
+            <span>Move basket</span>
+          </div>
+          <span class="control-separator">/</span>
+          <div class="control-item">
+            <span class="key-indicator">🖱️</span>
+            <span>Move basket</span>
+          </div>
+          <div class="control-item">
+            <span class="key-indicator">ESC</span>
+            <span>Pause</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Modal -->
+  <div class="instructions-modal" id="leaderboardModal" style="display:none;">
+    <div class="leaderboard-modal-content">
+      <button class="close-btn" id="closeLeaderboard">×</button>
+      <h2>Top 10 Leaderboard</h2>
+      <ol id="menuLeaderboardList" class="menu-leaderboard-list">
+        <!-- Leaderboard entries will be injected here -->
+      </ol>
+    </div>
+  </div>
+
+  <div class="game-container" id="gameContainer" style="display:none;">
     <!-- Pause/ESC Button -->
     <button class="pause-btn" id="pauseBtn" aria-label="Pause Game">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
