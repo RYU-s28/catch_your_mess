@@ -1,4 +1,47 @@
 window.addEventListener('load', function(){
+    // --- Intro Video Logic ---
+    const introVideoContainer = document.getElementById('introVideoContainer');
+    const introVideo = document.getElementById('introVideo');
+    const homeMenu = document.getElementById('homeMenu');
+    
+    // Check if intro has been played in this session
+    const introPlayed = sessionStorage.getItem('introPlayed');
+    
+    if (!introPlayed && introVideo) {
+        // First time opening in this window/tab - play intro
+        introVideoContainer.style.display = 'flex';
+        homeMenu.style.display = 'none';
+        
+        // Play the video
+        const playPromise = introVideo.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(err => {
+                console.log('Video autoplay failed, showing menu');
+                introVideoContainer.style.display = 'none';
+                homeMenu.style.display = 'flex';
+                sessionStorage.setItem('introPlayed', 'true');
+            });
+        }
+        
+        // When video ends, show home menu and mark as played
+        introVideo.addEventListener('ended', () => {
+            introVideoContainer.style.display = 'none';
+            homeMenu.style.display = 'flex';
+            sessionStorage.setItem('introPlayed', 'true');
+        });
+        
+        // Allow skipping by clicking
+        introVideoContainer.addEventListener('click', () => {
+            introVideo.pause();
+            introVideoContainer.style.display = 'none';
+            homeMenu.style.display = 'flex';
+            sessionStorage.setItem('introPlayed', 'true');
+        });
+    } else {
+        // Intro already played in this session or no video - show home menu directly
+        homeMenu.style.display = 'flex';
+    }
+    
     // --- Highscore Leaderboard Logic (Initialize early for menu) ---
     const LEADERBOARD_SIZE = 10;
     const LEADERBOARD_FILE = 'data/highscores.json';
@@ -90,6 +133,17 @@ window.addEventListener('load', function(){
             playerName.className = 'player-name';
             playerName.textContent = entry.name;
             
+            // Add trophy icon if player reached 1000
+            if(entry.reached1000) {
+                const trophyIcon = document.createElement('span');
+                trophyIcon.className = 'trophy-icon';
+                trophyIcon.textContent = '🏆';
+                trophyIcon.style.marginLeft = '5px';
+                trophyIcon.style.fontSize = '14px';
+                trophyIcon.title = 'Reached 1000 points!';
+                playerName.appendChild(trophyIcon);
+            }
+            
             const playerScore = document.createElement('span');
             playerScore.className = 'player-score';
             playerScore.textContent = entry.score.toLocaleString();
@@ -127,6 +181,17 @@ window.addEventListener('load', function(){
             playerName.className = 'player-name';
             playerName.textContent = entry.name;
             
+            // Add trophy icon if player reached 1000
+            if(entry.reached1000) {
+                const trophyIcon = document.createElement('span');
+                trophyIcon.className = 'trophy-icon';
+                trophyIcon.textContent = '🏆';
+                trophyIcon.style.marginLeft = '5px';
+                trophyIcon.style.fontSize = '14px';
+                trophyIcon.title = 'Reached 1000 points!';
+                playerName.appendChild(trophyIcon);
+            }
+            
             const playerScore = document.createElement('span');
             playerScore.className = 'player-score';
             playerScore.textContent = entry.score.toLocaleString();
@@ -143,7 +208,6 @@ window.addEventListener('load', function(){
     loadLeaderboard();
 
     // --- Home Menu Logic ---
-    const homeMenu = document.getElementById('homeMenu');
     const gameContainer = document.getElementById('gameContainer');
     const menuPlayBtn = document.getElementById('menuPlayBtn');
     const menuHowToPlayBtn = document.getElementById('menuHowToPlayBtn');
@@ -171,17 +235,43 @@ window.addEventListener('load', function(){
     
     // Menu button handlers
     if (menuPlayBtn) {
-        menuPlayBtn.addEventListener('click', startGame);
+        menuPlayBtn.addEventListener('click', () => {
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
+            startGame();
+        });
     }
     
     if (menuHowToPlayBtn) {
         menuHowToPlayBtn.addEventListener('click', () => {
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             instructionsModal.style.display = 'flex';
         });
     }
     
     if (menuLeaderboardBtn) {
         menuLeaderboardBtn.addEventListener('click', () => {
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             leaderboardModal.style.display = 'flex';
             updateMenuLeaderboard();
         });
@@ -189,12 +279,28 @@ window.addEventListener('load', function(){
     
     if (closeInstructions) {
         closeInstructions.addEventListener('click', () => {
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             instructionsModal.style.display = 'none';
         });
     }
     
     if (closeLeaderboard) {
         closeLeaderboard.addEventListener('click', () => {
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             leaderboardModal.style.display = 'none';
         });
     }
@@ -233,6 +339,7 @@ window.addEventListener('load', function(){
                 await db.collection('highscores').add({
                     name: shortName,
                     score: Math.floor(Number(score)),
+                    reached1000: reached1000,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 // reload
@@ -249,7 +356,7 @@ window.addEventListener('load', function(){
             const res = await fetch('/api/highscores', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: shortName, score: Number(score) })
+                body: JSON.stringify({ name: shortName, score: Number(score), reached1000: reached1000 })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -266,7 +373,7 @@ window.addEventListener('load', function(){
         // Local fallback
         const now = new Date();
         const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        leaderboard.push({ name: shortName, score: Math.floor(Number(score)), date: dateStr });
+        leaderboard.push({ name: shortName, score: Math.floor(Number(score)), reached1000: reached1000, date: dateStr });
         leaderboard.sort((a, b) => b.score - a.score);
         leaderboard = leaderboard.slice(0, LEADERBOARD_SIZE);
         saveLeaderboard();
@@ -388,7 +495,8 @@ window.addEventListener('load', function(){
         bomb: null,     // dynamite.png
         health: null,   // health.png (healing powerup)
         healthIcon: null,  // health.png (for HUD display)
-        brokenHealthIcon: null  // broken_health.png (for HUD display)
+        brokenHealthIcon: null,  // broken_health.png (for HUD display)
+        trophy: null    // trophy.png (1000 points achievement)
     };
 
     // Load sprite images
@@ -425,6 +533,10 @@ window.addEventListener('load', function(){
         
         sprites.brokenHealthIcon = new Image();
         sprites.brokenHealthIcon.src = baseUrl + 'broken_health.png';
+        
+        // Load trophy
+        sprites.trophy = new Image();
+        sprites.trophy.src = baseUrl + 'trophy.png';
     }
 
     // Helper to get random good drop sprite
@@ -619,6 +731,14 @@ window.addEventListener('load', function(){
     if(pauseBtn) {
         pauseBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             if(!gameOver) {
                 if(paused) {
                     resumeGame(true);
@@ -637,6 +757,14 @@ window.addEventListener('load', function(){
     if(leaderboardToggleBtn && leaderboardPanel) {
         leaderboardToggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            // Play button click sound
+            try {
+                if(buttonClick){
+                    buttonClick.currentTime = 0;
+                    const p = buttonClick.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
             leaderboardVisible = !leaderboardVisible;
             if(leaderboardVisible) {
                 leaderboardPanel.classList.add('visible');
@@ -649,13 +777,28 @@ window.addEventListener('load', function(){
     // Load sprites immediately
     loadSprites();
 
-    // Preload bomb sound effect (flashbang)
+    // Preload sound effects
     const bombAudio = new Audio('assets/audio/flashbang.mp3');
     bombAudio.volume = 0.7;
 
-    // Preload heal sound effect
     const healAudio = new Audio('assets/audio/Heal.mp3');
     healAudio.volume = 0.6;
+
+    // Additional sound effects using online sources
+    const coinSound = new Audio('assets/audio/good_sound.mp3');
+    coinSound.volume = 0.4;
+
+    const trashSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3');
+    trashSound.volume = 0.4;
+
+    const buttonClick = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    buttonClick.volume = 0.3;
+
+    const gameOverSound = new Audio('assets/audio/gameover.mp3');
+    gameOverSound.volume = 0.6;
+
+    const levelUpSound = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+    levelUpSound.volume = 0.5;
 
     // Preload background music
     const backgroundMusic = new Audio('assets/audio/matsuri_background.mp3');
@@ -694,6 +837,10 @@ window.addEventListener('load', function(){
     let consecutiveGoodCatches = 0;
     let lastScore = 0;
     let lastLevel = 1;
+    
+    // Trophy tracking
+    let trophySpawned = false; // track if trophy has been spawned for 1000 points
+    let reached1000 = false;   // track if player reached 1000 points
 
     // Function to create floating score animation
     function createFloatingScore(points, x, y) {
@@ -811,10 +958,15 @@ window.addEventListener('load', function(){
         // First object is always good
         let type = 'good';
         if(firstObjectSpawned){
+            // Check if we should spawn trophy (when score reaches 1000)
+            const hasTrophyOnScreen = items.some(item => item.type === 'trophy');
+            if(score >= 1000 && !trophySpawned && !hasTrophyOnScreen){
+                type = 'trophy';
+                trophySpawned = true;
+            }
             // Check if we should spawn a health powerup (1% chance when player has strikes)
             // Only spawn if player has strikes AND no health powerup is currently on screen
-            const hasHealthOnScreen = items.some(item => item.type === 'health');
-            if(bombsCaught > 0 && !hasHealthOnScreen && Math.random() < 0.01){
+            else if(bombsCaught > 0 && !items.some(item => item.type === 'health') && Math.random() < 0.01){
                 type = 'health';
                 // Ayiee alerts player about health spawn!
                 showAyieeDialogue('healthSpawned', 3500);
@@ -832,12 +984,14 @@ window.addEventListener('load', function(){
         else if(type === 'bad') sprite = sprites.badDrop;
         else if(type === 'bomb') sprite = sprites.bomb;
         else if(type === 'health') sprite = sprites.health;
+        else if(type === 'trophy') sprite = sprites.trophy;
 
         // per-item base vertical speed; global `fallSpeed` will be added each frame
         let vy = 0.8 + Math.random() * 1.8;
         if(type === 'bad') vy += 0.6;
         if(type === 'bomb') vy += 0.2;
         if(type === 'health') vy += 0.4; // health falls at moderate speed
+        if(type === 'trophy') vy += 0.3; // trophy falls slowly
 
         let initialY = -r - 10;
         
@@ -888,6 +1042,15 @@ window.addEventListener('load', function(){
             // restart spawn interval with new speed
             startSpawning();
             
+            // Play level up sound
+            try {
+                if(levelUpSound){
+                    levelUpSound.currentTime = 0;
+                    const p = levelUpSound.play();
+                    if(p && typeof p.then === 'function') p.catch(()=>{});
+                }
+            } catch (e) {}
+            
             // Dialogue for level up
             if(level > lastLevel && Math.random() < 0.7){
                 showAyieeDialogue('levelUp');
@@ -902,6 +1065,14 @@ window.addEventListener('load', function(){
         // Stop background music
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0;
+        // Play game over sound
+        try {
+            if(gameOverSound){
+                gameOverSound.currentTime = 0;
+                const p = gameOverSound.play();
+                if(p && typeof p.then === 'function') p.catch(()=>{});
+            }
+        } catch (e) {}
         // Check for highscore and show popup if needed
         if(isHighscore(score)) {
             setTimeout(() => showNameEntryPopup(score), 600);
@@ -969,6 +1140,14 @@ window.addEventListener('load', function(){
                     score += 5;
                     animateScoreAdd();
                     createFloatingScore(5, basket.x + basket.width / 2, basket.y - 10);
+                    // Play coin sound
+                    try {
+                        if(coinSound){
+                            coinSound.currentTime = 0;
+                            const p = coinSound.play();
+                            if(p && typeof p.then === 'function') p.catch(()=>{});
+                        }
+                    } catch (e) {}
                     
                     // Dialogue triggers for good catches
                     consecutiveGoodCatches++;
@@ -990,6 +1169,14 @@ window.addEventListener('load', function(){
                     triggerTrashOverlay();
                     animateScorePop();
                     createFloatingScore(-8, basket.x + basket.width / 2, basket.y - 10);
+                    // Play trash sound
+                    try {
+                        if(trashSound){
+                            trashSound.currentTime = 0;
+                            const p = trashSound.play();
+                            if(p && typeof p.then === 'function') p.catch(()=>{});
+                        }
+                    } catch (e) {}
                     
                     // Dialogue for trash catch - ALWAYS COMMENT
                     showAyieeDialogue('trashCatch');
@@ -1008,6 +1195,14 @@ window.addEventListener('load', function(){
                         // Flash canvas white for 1ms instead of minus points
                         triggerBombFlash();
                         animateScorePop();
+                        // Play bomb sound
+                        try {
+                            if(bombAudio){
+                                bombAudio.currentTime = 0;
+                                const p = bombAudio.play();
+                                if(p && typeof p.then === 'function') p.catch(()=>{});
+                            }
+                        } catch (e) {}
                         
                         // Dialogue for bomb hit - ALWAYS COMMENT
                         showAyieeDialogue('bombHit');
@@ -1042,6 +1237,20 @@ window.addEventListener('load', function(){
                     if(Math.random() < 0.6){
                         showAyieeDialogue('healthPickup');
                     }
+                } else if(it.type === 'trophy'){
+                    // Trophy achievement: mark that player reached 1000
+                    reached1000 = true;
+                    score += 100; // bonus points for catching trophy
+                    animateScoreAdd();
+                    createFloatingScore(100, basket.x + basket.width / 2, basket.y - 10);
+                    // Play coin sound (celebratory)
+                    try {
+                        if(coinSound){
+                            coinSound.currentTime = 0;
+                            const p = coinSound.play();
+                            if(p && typeof p.then === 'function') p.catch(()=>{});
+                        }
+                    } catch (e) {}
                 }
                 // remove
                 items.splice(i,1);
@@ -1131,13 +1340,31 @@ window.addEventListener('load', function(){
     const quitBtn = document.getElementById('quitBtn');
     if(continueBtn) continueBtn.addEventListener('click', resumeGame);
     if(resetBtn) resetBtn.addEventListener('click', () => { 
+        // Play button click sound
+        try {
+            if(buttonClick){
+                buttonClick.currentTime = 0;
+                const p = buttonClick.play();
+                if(p && typeof p.then === 'function') p.catch(()=>{});
+            }
+        } catch (e) {}
         // Close pause modal and reload to restart game in play mode
         const pm = document.getElementById('pauseModal');
         if(pm) pm.style.display = 'none';
         paused = false;
         window.location.reload();
     });
-    if(quitBtn) quitBtn.addEventListener('click', () => { window.location.href = '/'; });
+    if(quitBtn) quitBtn.addEventListener('click', () => { 
+        // Play button click sound
+        try {
+            if(buttonClick){
+                buttonClick.currentTime = 0;
+                const p = buttonClick.play();
+                if(p && typeof p.then === 'function') p.catch(()=>{});
+            }
+        } catch (e) {}
+        window.location.href = '/'; 
+    });
 
     // Auto pause when tab/window is not active. Respect user's manual pause.
     document.addEventListener('visibilitychange', () => {
